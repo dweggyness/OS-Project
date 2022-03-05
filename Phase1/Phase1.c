@@ -4,119 +4,192 @@
 #include <sys/wait.h>
 #include <string.h>
 
-void processpipeline(char *firstcommand[], char *secondcommand[] , char *thirdcommand[], char *fourthcommand[])
+void processpipeline1CMD(char *firstcommand[])
 {
-    int fd1[2]; // pipe 1 for getting output from child 1 and giving it to child 2 also
-    int fd2[2]; // pipe 2 for getting output from child 2 and giving it to child 3
-    int fd3[2]; // pipe 3 for getting output from cmd 3, and giving it to cmd 4
-    pid_t pid;
+  execvp(firstcommand[0], firstcommand);
+  fprintf(stderr, "Execvp failed while executing %s \n", firstcommand[0]);
+  exit(EXIT_FAILURE);
+}
+
+void processpipeline2CMD(char *firstcommand[], char *secondcommand[])
+{
+  int fd1[2]; // pipe 1 for getting output from child 1 and giving it to child 2 also
+  pid_t pid;
   
-    if (pipe(fd1) < 0)
-        exit(EXIT_FAILURE);
-    if (pipe(fd2) < 0)
-        exit(EXIT_FAILURE);
-    if (pipe(fd3) < 0)
-        exit(EXIT_FAILURE);
 
-    printf(" pipeline %d: at work\n", getpid());
-    pid = fork();
-    if (pid < 0)
-        exit(EXIT_FAILURE);
-    else if (pid == 0) // child 1 for cmd 1
-    {
-        printf("%d: child 1 - ls\n", getpid());
+  if (pipe(fd1) < 0)
+      exit(EXIT_FAILURE);
 
-        dup2(fd1[1], 1);// write by redirecting standard output to pipe 1
+  pid = fork();
+  if (pid < 0)
+      exit(EXIT_FAILURE);
+  else if (pid == 0) // child 1 for cmd 1
+  {
+    dup2(fd1[1], 1);// write by redirecting standard output to pipe 1
+    close(fd1[1]);
+    close(fd1[0]);
+    execvp(firstcommand[0], firstcommand);
+    fprintf(stderr, "Execvp failed while executing %s \n", firstcommand[0]);
+    exit(EXIT_FAILURE);
+  }
+  else
+  {    // child 2 for cmd 2
+    dup2(fd1[0], 0); // reading redirected ouput of ls through pipe 1
+    close(fd1[1]);
+    close(fd1[0]);
+    execvp(secondcommand[0], secondcommand);
+    fprintf(stderr, "Execvp failed while executing %s \n", secondcommand[0]);
+    exit(EXIT_FAILURE);
+  }
+  fprintf(stderr, "Reached unexpectedly\n");
+  exit(EXIT_FAILURE);
+}
+
+void processpipeline3CMD(char *firstcommand[], char *secondcommand[] , char *thirdcommand[])
+{
+  int fd1[2]; // pipe 1 for getting output from child 1 and giving it to child 2 also
+  int fd2[2]; // pipe 2 for getting output from child 2 and giving it to child 3
+  pid_t pid;
+  
+
+  if (pipe(fd1) < 0)
+      exit(EXIT_FAILURE);
+  if (pipe(fd2) < 0)
+      exit(EXIT_FAILURE);
+
+  pid = fork();
+  if (pid < 0)
+      exit(EXIT_FAILURE);
+  else if (pid == 0) // child 1 for cmd 1
+  {
+      dup2(fd1[1], 1);// write by redirecting standard output to pipe 1
+      close(fd1[1]);
+      close(fd1[0]);
+      close(fd2[0]);
+      close(fd2[1]);
+      execvp(firstcommand[0], firstcommand);
+      fprintf(stderr, "Execvp failed while executing %s \n", firstcommand[0]);
+      exit(EXIT_FAILURE);
+  }
+  else
+  {   
+      pid = fork();
+      if (pid == 0) // child 2 for cmd 2
+      {
+        dup2(fd1[0], 0); // reading redirected ouput of ls through pipe 1
+        dup2(fd2[1], 1); // write by redirecting standard output to pipe 2
         close(fd1[1]);
         close(fd1[0]);
-        close(fd2[0]);
         close(fd2[1]);
-        close(fd3[0]);
-        close(fd3[1]);
-        execvp(firstcommand[0], firstcommand);
-        perror ("Execvp failed while executing grep");
+        close(fd2[0]);
+        execvp(secondcommand[0], secondcommand);
+        fprintf(stderr, "Execvp failed while executing %s \n", secondcommand[0]);
         exit(EXIT_FAILURE);
-    }
-    else
-    {
-        printf("%d: parent - before second fork\n", getpid());
-        if (secondcommand == NULL) { // no command 23, dont run command 2, 3 and 4
-          exit(EXIT_SUCCESS);
-        }
+      }
+      else // parent, for cmd 3
+      {   
+        dup2(fd2[0], 0); // reading redirected ouput of ls through pipe 1
+        close(fd1[1]);
+        close(fd1[0]);
+        close(fd2[1]);
+        close(fd2[0]);
+        execvp(thirdcommand[0], thirdcommand);
+        fprintf(stderr, "Execvp failed while executing %s \n", thirdcommand[0]);
+        exit(EXIT_FAILURE);
+      }
+  }
+  fprintf(stderr, "Reached unexpectedly\n");
+  exit(EXIT_FAILURE);
+}
 
-        pid = fork();
-        if (pid == 0) // child 2 for cmd 2
-        {
-            printf("%d: child 2 - grep\n", getpid());
-            if (thirdcommand == NULL) // no command after this, write to stdoutput
-            {
-              dup2(fd1[0], 0); // reading redirected ouput of ls through pipe 1
-            } else { // cmd 4 after this, write to fd3
-              dup2(fd1[0], 0); // reading redirected ouput of ls through pipe 1
-              dup2(fd2[1], 1); // write by redirecting standard output to pipe 2
-            }
+void processpipeline4CMD(char *firstcommand[], char *secondcommand[] , char *thirdcommand[], char *fourthcommand[])
+{
+  int fd1[2]; // pipe 1 for getting output from child 1 and giving it to child 2 also
+  int fd2[2]; // pipe 2 for getting output from child 2 and giving it to child 3
+  int fd3[2]; // pipe 3 for getting output from cmd 3, and giving it to cmd 4
+  pid_t pid;
+  
+
+  if (pipe(fd1) < 0)
+      exit(EXIT_FAILURE);
+  if (pipe(fd2) < 0)
+      exit(EXIT_FAILURE);
+  if (pipe(fd3) < 0)
+      exit(EXIT_FAILURE);
+
+  pid = fork();
+  if (pid < 0)
+      exit(EXIT_FAILURE);
+  else if (pid == 0) // child 1 for cmd 1
+  {
+      dup2(fd1[1], 1);// write by redirecting standard output to pipe 1
+      close(fd1[1]);
+      close(fd1[0]);
+      close(fd2[0]);
+      close(fd2[1]);
+      close(fd3[0]);
+      close(fd3[1]);
+      execvp(firstcommand[0], firstcommand);
+      fprintf(stderr, "Execvp failed while executing %s \n", firstcommand[0]);
+      exit(EXIT_FAILURE);
+  }
+  else
+  {   
+      pid = fork();
+      if (pid == 0) // child 2 for cmd 2
+      {
+          dup2(fd1[0], 0); // reading redirected ouput of ls through pipe 1
+          dup2(fd2[1], 1); // write by redirecting standard output to pipe 2
+          close(fd1[1]);
+          close(fd1[0]);
+          close(fd2[1]);
+          close(fd2[0]);
+          close(fd3[1]);
+          close(fd3[0]);
+          execvp(secondcommand[0], secondcommand);
+          fprintf(stderr, "Execvp failed while executing %s \n", secondcommand[0]);
+          exit(EXIT_FAILURE);
+      }
+      else // parent, for cmd 3 and 4
+      {   
+          pid = fork();
+          if (pid == 0) // child 3 for cmd 3 
+          {
+            dup2(fd2[0], 0); // reading redirected ouput of ls through pipe 1
+            dup2(fd3[1], 1); // write by redirecting standard output to pipe 2
             close(fd1[1]);
             close(fd1[0]);
             close(fd2[1]);
             close(fd2[0]);
             close(fd3[0]);
             close(fd3[1]);
-            execvp(secondcommand[0], secondcommand);
-            perror ("Execvp failed while executing grep");
+            execvp(thirdcommand[0], thirdcommand);
+            fprintf(stderr, "Execvp failed while executing %s \n", thirdcommand[0]);
             exit(EXIT_FAILURE);
-        }
-        else // parent 
-        {
-            if (thirdcommand == NULL) { // no command 3, dont run command 3 and 4
-              exit(EXIT_SUCCESS);
-            }
-  
-            printf("%d: parent - before second fork\n", getpid());
-            pid = fork();
-            if (pid == 0) // child 3 for cmd 3 
-            {
-              printf("%d: child 3 \n", getpid());
-              if (fourthcommand == NULL) // no command after this, write to stdoutput
-              {
-                dup2(fd2[0], 0); // reading redirected ouput of ls through pipe 1
-              } else { // cmd 4 after this, write to fd3
-                dup2(fd2[0], 0); // reading redirected ouput of ls through pipe 1
-                dup2(fd3[1], 1); // write by redirecting standard output to pipe 2
-              }
-              close(fd1[1]);
-              close(fd1[0]);
-              close(fd2[1]);
-              close(fd2[0]);
-              close(fd3[0]);
-              close(fd3[1]);
-              execvp(thirdcommand[0], thirdcommand);
-              perror ("Execvp failed while executing grep");
-              exit(EXIT_FAILURE);
 
-            }
-            else { // parent for cmd 4
-              wait(NULL);
-              printf("%d: parent - wc\n", getpid());
-              if (fourthcommand == NULL) {
-                exit(EXIT_SUCCESS);
-              }
-              dup2(fd3[0], 0);
-              close(fd1[1]);
-              close(fd1[0]);
-              close(fd2[1]);
-              close(fd2[0]);
-              close(fd3[0]);
-              close(fd3[1]);
-              execvp(fourthcommand[0], fourthcommand);
-              perror ("Execvp failed while executing wc");
-              exit(EXIT_FAILURE);
-            }
-        }
-    }
-    fprintf(stderr, "Reached unexpectedly\n");
-    exit(EXIT_FAILURE);
+          }
+          else { // parent for cmd 4
+            dup2(fd3[0], 0);
+            close(fd1[1]);
+            close(fd1[0]);
+            close(fd2[1]);
+            close(fd2[0]);
+            close(fd3[0]);
+            close(fd3[1]);
+            execvp(fourthcommand[0], fourthcommand);
+            fprintf(stderr, "Execvp failed while executing %s \n", fourthcommand[0]);
+            exit(EXIT_FAILURE);
+          }
+      }
+  }
+  fprintf(stderr, "Reached unexpectedly\n");
+  exit(EXIT_FAILURE);
 }
 
+
+
+
+// parser for input, supports up to 3 pipes ( 4 commands )
 
 void readParseInput() {
   char inputStr[1000];
@@ -132,6 +205,10 @@ void readParseInput() {
   fgets(inputStr, sizeof(inputStr), stdin);
   inputStr[strcspn(inputStr, "\n")] = 0;
   printf("\n");
+  if (strcmp(inputStr, "") == 0) {
+    printf("No command entered. Terminating... \n");
+    return;
+  }
   char* token = strtok(inputStr, " ");
 
   int curCommand = 1;
@@ -217,30 +294,57 @@ void readParseInput() {
 
   switch (curCommand) {
     case 1: // only 1 command, the rest is NULL
-      processpipeline(firstcommand, NULL, NULL, NULL);
+      processpipeline1CMD(firstcommand);
       break;
     case 2:
-      processpipeline(firstcommand, secondcommand, NULL, NULL);
+      processpipeline2CMD(firstcommand, secondcommand);
       break;
     case 3:
-      processpipeline(firstcommand, secondcommand, thirdcommand, NULL);
+      processpipeline3CMD(firstcommand, secondcommand, thirdcommand);
       break;
     case 4:
-      processpipeline(firstcommand, secondcommand, thirdcommand, fourthcommand);
+      processpipeline4CMD(firstcommand, secondcommand, thirdcommand, fourthcommand);
       break;
   }
 }
 
 int main()
-{
-    char *firstcommand[] = {"cat", "file3.txt", NULL};
-    char *secondcommand[] = {"grep", "yasin", NULL};
-    char *thirdcommand[] = {"tee", "file4.txt", NULL};
-    char *fourthcommand[] = {"wc", "-l", NULL};
+{ 
+    // sample command with 3 pipes
+    // cat words.txt | grep yasin | tee output1.txt | wc -l
+    // cat words.txt | uniq | sort | head -10
+    // sort alphabets.txt | head -10 | tail -5 > output3.txt | cat output3.txt
+
+    // sample command with 2 pipe
+    // sort words.txt | head -10 | grep 'a'
+    // cat words.txt | grep yasin | wc -l
+
+    // sample command with 1 pipe
+    // cat alphabets.txt | tail -10
+    // cat words.txt | uniq
+    
+    // sample command with 0 pipes
+    // ls -l
+    // man
+
+    printf("\n");
+    printf("@@@ Welcome to JS (Jun Sonya) Shell @@@\n");
+    printf("Please type your command into the shell \n");
+    printf("\n");
+    printf("Ideas for commands: \n");
+    printf("--- 3 pipes --- \n");
+    printf("cat words.txt | grep yasin | tee output1.txt | wc -l\n");
+    printf("cat words.txt | uniq | sort | head -10\n");
+    printf("sort alphabets.txt | head -10 | tail -5 > output3.txt | cat output3.txt\n");
+    printf("--- 2 pipes --- \n");
+    printf("sort words.txt | head -10 | grep 'a'\n");
+    printf("cat words.txt | grep yasin | wc -l\n");
+    printf("--- 1 pipe --- \n");
+    printf("cat alphabets.txt | tail -10\n");
+    printf("cat words.txt | uniq\n");
+    printf("--- 0 pipes --- \n");
+    printf("... You got this! \n\n");
 
     readParseInput();
-
-    // processpipeline(firstcommand, secondcommand, NULL, NULL);
-
     return 0;
 }

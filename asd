@@ -4,12 +4,15 @@
 #include <sys/wait.h>
 #include <string.h>
 
+void processpipeline4CMD
+
 void processpipeline(char *firstcommand[], char *secondcommand[] , char *thirdcommand[], char *fourthcommand[])
 {
-    int fd1[2]; // pipe 1 for getting output of ls from child 1 and giving it to child 2 also
-    int fd2[2]; // pipe 2 for getting output of grep from child 2 and giving it to parent wc
+    int fd1[2]; // pipe 1 for getting output from child 1 and giving it to child 2 also
+    int fd2[2]; // pipe 2 for getting output from child 2 and giving it to child 3
     int fd3[2]; // pipe 3 for getting output from cmd 3, and giving it to cmd 4
     pid_t pid;
+    
   
     if (pipe(fd1) < 0)
         exit(EXIT_FAILURE);
@@ -26,7 +29,12 @@ void processpipeline(char *firstcommand[], char *secondcommand[] , char *thirdco
     {
         printf("%d: child 1 - ls\n", getpid());
 
-        dup2(fd1[1], 1);// write by redirecting standard output to pipe 1
+        if (secondcommand == NULL) // no command after this, write to stdoutput
+        {}
+        else {
+          dup2(fd1[1], 1);// write by redirecting standard output to pipe 1
+        }
+
         close(fd1[1]);
         close(fd1[0]);
         close(fd2[0]);
@@ -38,12 +46,13 @@ void processpipeline(char *firstcommand[], char *secondcommand[] , char *thirdco
         exit(EXIT_FAILURE);
     }
     else
-    {
+    {   
         printf("%d: parent - before second fork\n", getpid());
-        if (secondcommand == NULL) { // no command 23, dont run command 2, 3 and 4
+        if (secondcommand == NULL) { // no command 2, dont run command 2, 3 and 4
           exit(EXIT_SUCCESS);
         }
 
+        // pid = fork();
         pid = fork();
         if (pid == 0) // child 2 for cmd 2
         {
@@ -59,18 +68,21 @@ void processpipeline(char *firstcommand[], char *secondcommand[] , char *thirdco
             close(fd1[0]);
             close(fd2[1]);
             close(fd2[0]);
-            close(fd3[0]);
             close(fd3[1]);
+            close(fd3[0]);
+            printf("EXECUTING CMD 2 \n");
             execvp(secondcommand[0], secondcommand);
+            printf("EXEC CMD 2 FAIL \n");
             perror ("Execvp failed while executing grep");
             exit(EXIT_FAILURE);
         }
-        else // parent 
-        {
+        else // parent, for cmd 3 and 4
+        {   
+            printf("GOING TO CMD 3 \n");
             if (thirdcommand == NULL) { // no command 3, dont run command 3 and 4
+              printf("LEAVING NOW THIRD COMMAND NULL \n");
               exit(EXIT_SUCCESS);
             }
-  
             printf("%d: parent - before second fork\n", getpid());
             pid = fork();
             if (pid == 0) // child 3 for cmd 3 
@@ -231,11 +243,22 @@ void readParseInput() {
 }
 
 int main()
-{
-    char *firstcommand[] = {"cat", "file3.txt", NULL};
-    char *secondcommand[] = {"grep", "yasin", NULL};
-    char *thirdcommand[] = {"tee", "file4.txt", NULL};
-    char *fourthcommand[] = {"wc", "-l", NULL};
+{ 
+    // sample command with 3 pipes
+    // cat words.txt | grep yasin | tee output1.txt | wc -l
+    // cat words.txt | uniq | sort | head -10
+    // sort alphabets.txt | head -10 | tee output3.txt | cat output3.txt
+
+    // sample command with 2 pipe
+    // sort words.txt | head -10 | grep 'a'
+
+    // sample command with 1 pipe
+    // cat words.txt | head -5
+    
+    // sample command with 0 pipes
+    // ls -l
+    // man
+
 
     readParseInput();
 
