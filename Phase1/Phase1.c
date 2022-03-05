@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 void processpipeline(char *firstcommand[], char *secondcommand[] , char *thirdcommand[], char *fourthcommand[])
 {
-    int fd1[2]; // pipe 1 for getting output of ls from child 1 and giving it to child 2 also
-    int fd2[2]; // pipe 2 for getting output of grep from child 2 and giving it to parent wc
+    int fd1[2]; // pipe 1 for getting output from child 1 and giving it to child 2 also
+    int fd2[2]; // pipe 2 for getting output from child 2 and giving it to child 3
     int fd3[2]; // pipe 3 for getting output from cmd 3, and giving it to cmd 4
     int pid;
   
@@ -89,6 +90,7 @@ void processpipeline(char *firstcommand[], char *secondcommand[] , char *thirdco
 
             }
             else { // parent for cmd 4
+              wait(NULL);
               printf("%d: parent - wc\n", getpid());
               if (fourthcommand == NULL) {
                 printf("return \n");
