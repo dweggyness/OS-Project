@@ -1,0 +1,57 @@
+3/usr/bin/makepp Phase1
+VERSION2.0.98.55.26.1x86_64-linux-gnu-thread-multi
+DEBUG0
+LOAD_DEFAULT7fffd30b07e8phase17fffd30b0560/mnt/c/users/sonya/documents/github/os-project
+LOAD_INCL7fffd371d460makepp_builtin_rules.mk7fffd38900c0/usr/share/makepp7fffd390c2d0makepp_default_makefile.mk7fffd38900c0
+LOAD_END7fffd390c2d0
+TRY7fffd387aba8phase17fffd30b07e8
+USE/usr/share/makepp/makepp_builtin_rules.mk:78(/mnt/c/users/sonya/documents/github/os-project/phase1)
+INFER_SEED7fffd3932fb0phase1.o7fffd30b07e8
+PREBUILD7fffd3932fb0/usr/share/makepp/makepp_builtin_rules.mk:78(/mnt/c/users/sonya/documents/github/os-project/phase1)
+TRY7fffd3932fb0
+USE/usr/share/makepp/makepp_builtin_rules.mk:97(/mnt/c/users/sonya/documents/github/os-project/phase1)
+LOAD_DEFAULT7fffd39399a8bin7fffd3939798/home/yaya1721/.local
+LOAD_INCL7fffd371d4607fffd390c2d0
+LOAD_END7fffd390c2d0
+SCAN_INFO7fffd3932fb0
+LEX_RULE7fffd3932fb0info not cached
+PARSEgcc  -g -Wall  -c phase1.c -o phase1.o7fffd30b07e8/usr/share/makepp/makepp_builtin_rules.mk:97(/mnt/c/users/sonya/documents/github/os-project/phase1)
+TRY7fffd396a7e8gcc7fffd395acc8/usr/bin
+USEdefault rule
+DEPEND7fffd396a7e8
+UP_TO_DATE7fffd396a7e8
+TRY7fffd3928af8phase1.c7fffd30b07e8
+USEdefault rule
+DEPEND7fffd3928af8
+UP_TO_DATE7fffd3928af8
+INCL7fffd3928af87fffd395e8d8stdio.h7fffd3997270/usr/include
+TRY7fffd395e8d8
+USEdefault rule
+DEPEND7fffd395e8d8
+UP_TO_DATE7fffd395e8d8
+INCL7fffd3928af87fffd39f6a58stdlib.h7fffd3997270
+TRY7fffd39f6a58
+USEdefault rule
+DEPEND7fffd39f6a58
+UP_TO_DATE7fffd39f6a58
+INCL7fffd3928af87fffd39faf50unistd.h7fffd3997270
+TRY7fffd39faf50
+USEdefault rule
+DEPEND7fffd39faf50
+UP_TO_DATE7fffd39faf50
+INCL7fffd3928af87fffd39f6ae8string.h7fffd3997270
+TRY7fffd39f6ae8
+USEdefault rule
+DEPEND7fffd39f6ae8
+UP_TO_DATE7fffd39f6ae8
+DEPEND7fffd3932fb07fffd396a7e87fffd3928af87fffd395e8d87fffd39f6a587fffd39f6ae87fffd39faf50
+BUILD_INVALID7fffd3932fb0
+SUCCESS/usr/share/makepp/makepp_builtin_rules.mk:97(/mnt/c/users/sonya/documents/github/os-project/phase1)7fffd3932fb0
+PREBUILD7fffd3932fb0/usr/share/makepp/makepp_builtin_rules.mk:78(/mnt/c/users/sonya/documents/github/os-project/phase1)
+SCAN_INFO7fffd387aba8
+LEX_RULE7fffd387aba8info not cached
+PARSEgcc phase1.o    -o phase17fffd30b07e8/usr/share/makepp/makepp_builtin_rules.mk:78(/mnt/c/users/sonya/documents/github/os-project/phase1)
+DEPEND7fffd387aba87fffd396a7e87fffd3932fb0
+BUILD_NONE7fffd387aba8
+SUCCESS/usr/share/makepp/makepp_builtin_rules.mk:78(/mnt/c/users/sonya/documents/github/os-project/phase1)7fffd387aba8
+N_FILES200

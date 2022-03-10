@@ -201,6 +201,7 @@ void readParseInput() {
 
   int firstIndex = 0, secondIndex = 0, thirdIndex = 0, fourthIndex = 0;
 
+  //create our own shell
   printf("$ ");
   fgets(inputStr, sizeof(inputStr), stdin);
   inputStr[strcspn(inputStr, "\n")] = 0;

@@ -1,0 +1,15 @@
+IMPLICIT_TARGETS=phase1.o
+DEP_SIGS=1575469541,1047488uajXghMbtrsw5tWX6kBa3g1591291526,296651591291526,357841591291526,175451591291526,42785
+SIG_METHOD_NAME=C
+SORTED_DEPS=/usr/bin/gccphase1.c/usr/include/stdio.h/usr/include/stdlib.h/usr/include/string.h/usr/include/unistd.h
+COMMAND=gcc  -g -Wall  -c phase1.c -o phase1.o
+SIGNATURE=1646915518,17496
+IMPLICIT_DEPS=
+BUILD_SIGNATURE=1646915518,17496
+INCLUDE_PATHS=sys/usr/local/include/usr/includeuser/usr/local/include/usr/include
+ARCH=x86_64-linux-gnu-thread-multi
+CWD=.
+SIG_METHOD_IMPLICIT=1
+INCLUDE_SFXS=
+META_DEPS=/usr/bin/gccphase1.csysstdio.hstdlib.hstring.hsys/wait.hunistd.h
+END=

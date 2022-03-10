@@ -1,0 +1,15 @@
+INCLUDE_SFXS=lib.la.so.sa.a.sl
+SIG_METHOD_IMPLICIT=1
+META_DEPS=/usr/bin/gcc
+IMPLICIT_DEPS=phase1.o
+BUILD_SIGNATURE=1646915519,17480
+CWD=.
+ARCH=x86_64-linux-gnu-thread-multi
+INCLUDE_PATHS=lib/usr/local/lib/usr/lib/libsys/usr/local/include/usr/includeuser/usr/local/include/usr/include
+SORTED_DEPS=/usr/bin/gccphase1.o
+SIGNATURE=1646915519,17480
+COMMAND=gcc phase1.o    -o phase1
+IMPLICIT_TARGETS=phase1
+SIG_METHOD_NAME=C
+DEP_SIGS=1575469541,10474881646915518,17496
+END=
