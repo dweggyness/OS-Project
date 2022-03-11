@@ -208,10 +208,12 @@ void readParseInput() {
   printf("\n");
   if (strcmp(inputStr, "") == 0) {
     printf("No command entered. Terminating... \n");
+    kill(getppid(), SIGUSR1);
     exit(0);
   }
   if(strcmp(inputStr, "exit") == 0){
     printf("Exit program. Terminating... \n");
+    kill(getppid(), SIGUSR1);
     exit(0);
   }
 
