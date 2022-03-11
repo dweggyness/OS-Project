@@ -353,9 +353,19 @@ int main()
     printf("... You got this! \n\n");
     printf("type \"exit\" to quit the program\n");
 
-
+    
     while(1){
-      readParseInput();
+      pid_t pid = fork();
+      if(pid < 0){
+        exit(EXIT_FAILURE);
+      }
+      else if(pid == 0){
+        readParseInput();
+      }
+      else{
+        wait(NULL);
+        continue;
+      }
     }
     
     return 0;
