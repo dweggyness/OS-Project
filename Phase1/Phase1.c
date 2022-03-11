@@ -340,10 +340,10 @@ int main()
     printf("--- 2 pipes --- \n");
     printf("sort words.txt | head -10 | grep 'a'\n");
     printf("cat words.txt | grep yasin | wc -l\n");
-    printf("df | tee disk¬_usage.txt\n");
     printf("--- 1 pipe --- \n");
     printf("cat alphabets.txt | tail -10\n");
     printf("cat words.txt | uniq\n");
+    printf("df | tee disk_usage.txt\n");
     printf("--- 0 pipes --- \n");
     printf("... You got this! \n\n");
 
