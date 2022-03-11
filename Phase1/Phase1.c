@@ -208,8 +208,13 @@ void readParseInput() {
   printf("\n");
   if (strcmp(inputStr, "") == 0) {
     printf("No command entered. Terminating... \n");
-    return;
+    exit(0);
   }
+  if(strcmp(inputStr, "exit") == 0){
+    printf("Exit program. Terminating... \n");
+    exit(0);
+  }
+
   char* token = strtok(inputStr, " ");
 
   int curCommand = 1;
@@ -336,7 +341,7 @@ int main()
     printf("--- 3 pipes --- \n");
     printf("cat words.txt | grep yasin | tee output1.txt | wc -l\n");
     printf("cat words.txt | uniq | sort | head -10\n");
-    printf("sort alphabets.txt | head -10 | tail -5 > output3.txt | cat output3.txt\n");
+    printf("sort alphabets.txt | head -10 | tail -n 5 | tee output3.txt\n");
     printf("--- 2 pipes --- \n");
     printf("sort words.txt | head -10 | grep 'a'\n");
     printf("cat words.txt | grep yasin | wc -l\n");
@@ -346,7 +351,12 @@ int main()
     printf("df | tee disk_usage.txt\n");
     printf("--- 0 pipes --- \n");
     printf("... You got this! \n\n");
+    printf("type \"exit\" to quit the program\n");
 
-    readParseInput();
+
+    while(1){
+      readParseInput();
+    }
+    
     return 0;
 }
