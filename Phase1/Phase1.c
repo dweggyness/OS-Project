@@ -33,7 +33,7 @@ void processpipeline2CMD(char *firstcommand[], char *secondcommand[])
     exit(EXIT_FAILURE);
   }
   else
-  {    // child 2 for cmd 2
+  {    // parent for cmd 2
     dup2(fd1[0], 0); // reading redirected ouput of ls through pipe 1
     close(fd1[1]);
     close(fd1[0]);
@@ -150,7 +150,7 @@ void processpipeline4CMD(char *firstcommand[], char *secondcommand[] , char *thi
           fprintf(stderr, "Execvp failed while executing %s \n", secondcommand[0]);
           exit(EXIT_FAILURE);
       }
-      else // parent, for cmd 3 and 4
+      else 
       {   
           pid = fork();
           if (pid == 0) // child 3 for cmd 3 
@@ -206,14 +206,14 @@ void readParseInput() {
   fgets(inputStr, sizeof(inputStr), stdin);
   inputStr[strcspn(inputStr, "\n")] = 0;
   printf("\n");
-  if (strcmp(inputStr, "") == 0) {
+  if (strcmp(inputStr, "") == 0) { //handle empty command
     printf("No command entered. Terminating... \n");
-    kill(getppid(), SIGUSR1);
+    kill(getppid(), SIGUSR1); //kill the parent process within a child
     exit(0);
   }
-  if(strcmp(inputStr, "exit") == 0){
+  if(strcmp(inputStr, "exit") == 0){ //handle exit command
     printf("Exit program. Terminating... \n");
-    kill(getppid(), SIGUSR1);
+    kill(getppid(), SIGUSR1); //kill the parent process within a child
     exit(0);
   }
 
