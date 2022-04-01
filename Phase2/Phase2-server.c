@@ -7,7 +7,7 @@
 #include <netinet/in.h> //header for MACROS and structures related to addresses "sockaddr_in", INADDR_ANY 
 #include <arpa/inet.h> // header for functions related to addresses from text to binary form, inet_pton 
 
-#define PORT 8000
+#define PORT 5000
 
 
 void processpipeline1CMD(char *firstcommand[])

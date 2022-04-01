@@ -6,7 +6,7 @@
 #include <string.h>
 #include <arpa/inet.h> 
 
-#define PORT 8000
+#define PORT 5000
 
 int main()
 {
@@ -43,12 +43,14 @@ int main()
     printf("\nConnection Failed \n");
     return -1;
   }
+  while(1){
+    // variable such as message buffers to receive and send messages
+    char inputStr[1000];
+    fgets(inputStr, sizeof(inputStr), stdin);
+    
+    send(sock,inputStr,strlen(inputStr),0); // send hello message to server
+  }
 
-  // variable such as message buffers to receive and send messages
-  char inputStr[1000];
-  fgets(inputStr, sizeof(inputStr), stdin);
-  
-  send(sock,inputStr,strlen(inputStr),0); // send hello message to server
 
   close(sock); // close the socket/end the conection
 
