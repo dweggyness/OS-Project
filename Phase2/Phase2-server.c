@@ -3,6 +3,12 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <sys/socket.h> // header for socket specific functions and macros declarations
+#include <netinet/in.h> //header for MACROS and structures related to addresses "sockaddr_in", INADDR_ANY 
+#include <arpa/inet.h> // header for functions related to addresses from text to binary form, inet_pton 
+
+#define PORT 8000
+
 
 void processpipeline1CMD(char *firstcommand[])
 {
@@ -334,6 +340,32 @@ int main()
     // sample command with 0 pipes
     // ls -l
     // man
+    
+
+    int sock1, sock2, valread;
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
+
+    //create socket file descriptor 
+    if((sock1 = socket(AF_INET, SOCK_STREAM, 0)) == 0){
+      perror("socket failed");
+      exit(EXIT_FAILURE);
+    }
+
+    // setting the address to be bind to socket
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
+    address.sin_port = htons(PORT);
+
+
+    // attaching socket to addresses (any/all local ip with port 5564)
+    if (bind(sock1, (struct sockaddr *)&address,
+     sizeof(address)) < 0) // checking if bind fails
+    {
+      perror("bind failed");
+      exit(EXIT_FAILURE);
+    }
+
 
     printf("\n");
     printf("@@@ Welcome to JS (Jun Sonya) Shell @@@\n");
@@ -357,6 +389,26 @@ int main()
 
     
     while(1){
+
+      if (listen(sock1, 10) < 0) // defining for socket length of queue for pending client connections
+      {
+        perror("Listen Failed");
+        exit(EXIT_FAILURE);
+      }
+      if ((sock2 = accept(sock1, (struct sockaddr *)&address,
+       (socklen_t *)&addrlen)) < 0) // accepting the client connection with creation/return of a new socket for the established connection to enable dedicated communication (active communication on a new socket) with the client
+      {
+        perror("accept");
+        exit(EXIT_FAILURE);
+      }
+
+
+      char message[1024] = {0};
+     
+      recv(sock2, message, sizeof(message),0); // receive hello message from client
+      printf("Server Received: %s\n", message); // print the received message
+      
+
       pid_t pid = fork();
       if(pid < 0){
         exit(EXIT_FAILURE);
