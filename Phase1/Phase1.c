@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <stdbool.h>
 
 void processpipeline1CMD(char *firstcommand[])
 {
@@ -194,10 +195,10 @@ void processpipeline4CMD(char *firstcommand[], char *secondcommand[] , char *thi
 void readParseInput() {
   char inputStr[1000];
 
-  char *firstcommand[5];
-  char *secondcommand[5];
-  char *thirdcommand[5];
-  char *fourthcommand[5];
+  char *firstcommand[10];
+  char *secondcommand[10];
+  char *thirdcommand[10];
+  char *fourthcommand[10];
 
   int firstIndex = 0, secondIndex = 0, thirdIndex = 0, fourthIndex = 0;
 
@@ -217,83 +218,84 @@ void readParseInput() {
     exit(0);
   }
 
-  char* token = strtok(inputStr, " ");
+  // remove trailing \n from the inputStr
+  // https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input
+  inputStr[strcspn(inputStr, "\n")] = 0;
 
-  int curCommand = 1;
-  while (token) { // read the string, token by token
-      
-      // Strips a token of any quotation marks, e.g 'yasin' -> yasin
+  // input string done preprocessing
+
+  char* strtok1;
+  char* strtok2;
+
+  char* command = strtok_r(inputStr, "|", &strtok1); // split the string by pipes
+
+  int curCommand = 0;
+  while (command) {
+
+    if (strcmp(command, "|") == 0) {
+      command = strtok_r(NULL, " ", &strtok1);
+      continue;
+    }
+    curCommand++;
+  
+    
+    char* strtok2 = NULL;
+    char* token = strtok_r(command, " ", &strtok2); // split the command by spaces
+    while (token) {
+      // Strips a token of any quotation marks, and '\' e.g 'yasin' -> yasin
       // code from : https://stackoverflow.com/questions/7143878/how-to-remove-quotes-from-a-string-in-c
       int j = 0;
       for (int i = 0; i < strlen(token); i ++) {
-        if (token[i] != '\'' && token[i] != '\\') { 
+        if (token[i] != '\'' && token[i] != '\"' && token[i] != '\\') { 
             token[j++] = token[i];
-        } else if (token[i+1] == '\'' && token[i] == '\\') { 
+        } else if (token[i+1] == '\'' && token[i+i] != '\"' && token[i] == '\\') { 
             token[j++] = '\'';
-        } else if (token[i+1] != '\'' && token[i] == '\\') { 
+        } else if (token[i+1] != '\'' && token[i+i] != '\"' && token[i] == '\\') { 
             token[j++] = '\\';
         }
       }
-
+      
       if(j>0) token[j]=0;
-      // strip done
-
-      // now process the current token
-      // if current token is '|', then its pipe. current CMD is done, move on to next command
-      if (strcmp(token, "|") == 0) { // add a 'NULL' to the current cmd array, then move to next cmd
-        switch(curCommand) { // otherwise, not a pipe command, just add the token to current cmd
-          case 1:
-            firstcommand[firstIndex] = NULL;
-            curCommand++;
-            break;
-          case 2:
-            secondcommand[secondIndex] = NULL;
-            curCommand++;
-            break;
-          case 3:
-            thirdcommand[thirdIndex] = NULL;
-            curCommand++;
-            break;
-        }
-      } else {
-        switch(curCommand) { // otherwise, not a pipe command, just add the token to current cmd
-          case 1:
-            firstcommand[firstIndex] = token;
-            firstIndex++;
-            break;
-          case 2:
-            secondcommand[secondIndex] = token;
-            secondIndex++;
-            break;
-          case 3:
-            thirdcommand[thirdIndex] = token;
-            thirdIndex++;
-            break;
-          case 4:
-            fourthcommand[fourthIndex] = token;
-            fourthIndex++;
-            break;
+      switch(curCommand) { // add the token to the correct command order
+        case 1:
+          firstcommand[firstIndex] = token;
+          firstIndex++;
+          break;
+        case 2:
+          secondcommand[secondIndex] = token;
+          secondIndex++;
+          break;
+        case 3:
+          thirdcommand[thirdIndex] = token;
+          thirdIndex++;
+          break;
+        case 4:
+          fourthcommand[fourthIndex] = token;
+          fourthIndex++;
+          break;
       }
+
+      token = strtok_r(NULL, " ", &strtok2);
+    }
+
+    // command construction complete, add a NULL to the end of the array
+    switch(curCommand) { 
+      case 1:
+        firstcommand[firstIndex] = NULL;
+        break;
+      case 2:
+        secondcommand[secondIndex] = NULL;
+        break;
+      case 3:
+        thirdcommand[thirdIndex] = NULL;
+        break;
+      case 4:
+        fourthcommand[fourthIndex] = NULL;
+        break;
+
     }
     // go to next token
-    token = strtok(NULL, " ");
-  }
-
-  // end of string parsing
-  // end of tokens, add a NULL to the final command array , e.g [ls, -l] -> [ls, -l, NULL]
-  switch(curCommand) {
-    case 1:
-      firstcommand[firstIndex] = NULL;
-      break;
-    case 2:
-      secondcommand[secondIndex] = NULL;
-      break;
-    case 3:
-      thirdcommand[thirdIndex] = NULL;
-      break;
-    case 4:
-      fourthcommand[fourthIndex] = NULL;
-      break;
+    command = strtok_r(NULL, "|", &strtok1);
   }
 
   // now, depending on the number of pipes, call processpipeline with different parameters
