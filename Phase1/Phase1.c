@@ -207,8 +207,8 @@ void readParseInput() {
   inputStr[strcspn(inputStr, "\n")] = 0;
   printf("\n");
   if (strcmp(inputStr, "") == 0) { //handle empty command
-    printf("No command entered. Terminating... \n");
-    kill(getppid(), SIGUSR1); //kill the parent process within a child
+    printf("No command entered. Continue... \n");
+    //kill(getppid(), SIGUSR1); //kill the parent process within a child
     exit(0);
   }
   if(strcmp(inputStr, "exit") == 0){ //handle exit command
