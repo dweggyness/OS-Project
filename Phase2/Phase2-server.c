@@ -197,8 +197,8 @@ void processpipeline4CMD(char *firstcommand[], char *secondcommand[] , char *thi
 
 // parser for input, supports up to 3 pipes ( 4 commands )
 
-void readParseInput() {
-  char inputStr[1000];
+void readParseInput(char* inputStr) {
+  //char inputStr[1000];
 
   char *firstcommand[5];
   char *secondcommand[5];
@@ -209,7 +209,7 @@ void readParseInput() {
 
   //create our own shell
   printf("$ ");
-  fgets(inputStr, sizeof(inputStr), stdin);
+  //fgets(inputStr, sizeof(inputStr), stdin);
   inputStr[strcspn(inputStr, "\n")] = 0;
   printf("\n");
   if (strcmp(inputStr, "") == 0) { //handle empty command
@@ -342,7 +342,7 @@ int main()
     // man
     
 
-    int sock1, sock2, valread;
+    int sock1, sock2;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
 
@@ -402,19 +402,17 @@ int main()
         exit(EXIT_FAILURE);
       }
 
-
       char message[1024] = {0};
      
-      recv(sock2, message, sizeof(message),0); // receive hello message from client
-      printf("Server Received: %s\n", message); // print the received message
-      
+      recv(sock2, message, sizeof(message),0); // receive input string from client
+      printf("Server Received: %s\n", message); // print the received message 
 
       pid_t pid = fork();
       if(pid < 0){
         exit(EXIT_FAILURE);
       }
       else if(pid == 0){
-        readParseInput();
+        readParseInput(message);
       }
       else{
         wait(NULL);
