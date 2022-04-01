@@ -43,12 +43,11 @@ int main()
     printf("\nConnection Failed \n");
     return -1;
   }
+  char inputStr[1000];
   while(1){
-    // variable such as message buffers to receive and send messages
-    char inputStr[1000];
+    // variable such as message buffers to receive and send messages 
     fgets(inputStr, sizeof(inputStr), stdin);
-    
-    send(sock,inputStr,strlen(inputStr),0); // send hello message to server
+    send(sock,inputStr,strlen(inputStr),0); // send input message to server
   }
 
 

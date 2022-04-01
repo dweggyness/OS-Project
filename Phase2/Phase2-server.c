@@ -359,8 +359,8 @@ int main()
 
 
     // attaching socket to addresses (any/all local ip with port 5564)
-    if (bind(sock1, (struct sockaddr *)&address,
-     sizeof(address)) < 0) // checking if bind fails
+    if (bind(sock1, (struct sockaddr *)&address, sizeof(address)) < 0) 
+    // checking if bind fails
     {
       perror("bind failed");
       exit(EXIT_FAILURE);
@@ -395,30 +395,35 @@ int main()
         perror("Listen Failed");
         exit(EXIT_FAILURE);
       }
-      if ((sock2 = accept(sock1, (struct sockaddr *)&address,
-       (socklen_t *)&addrlen)) < 0) // accepting the client connection with creation/return of a new socket for the established connection to enable dedicated communication (active communication on a new socket) with the client
-      {
-        perror("accept");
-        exit(EXIT_FAILURE);
-      }
+      while ((sock2 = accept(sock1, (struct sockaddr *)&address,(socklen_t *)&addrlen))) 
+      {// accepting the client connection with creation/return of a new socket for the established connection to enable dedicated communication (active communication on a new socket) with the client
+        if(sock2 < 0){
+          perror("accept");
+          exit(EXIT_FAILURE);
+        }
 
-      char message[1024] = {0};
-     
-      recv(sock2, message, sizeof(message),0); // receive input string from client
-      printf("Server Received: %s\n", message); // print the received message 
+        char message[1024] = {0};
+       
+        recv(sock2, message, sizeof(message),0); // receive input string from client
+        printf("Server Received: %s\n", message); // print the received message 
 
-      pid_t pid = fork();
-      if(pid < 0){
-        exit(EXIT_FAILURE);
+        pid_t pid = fork();
+        if(pid < 0){
+          exit(EXIT_FAILURE);
+        }
+        else if(pid == 0){
+          readParseInput(message);
+        }
+        else{
+          wait(NULL);
+          continue;
+        }
+        
+        close(sock2);
       }
-      else if(pid == 0){
-        readParseInput(message);
-      }
-      else{
-        wait(NULL);
-        continue;
-      }
+      
     }
+    close(sock1);
     
     return 0;
 }
