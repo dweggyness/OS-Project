@@ -44,14 +44,38 @@ int main()
     return -1;
   }
   char inputStr[1000];
+
+  printf("Successfully connected to server at port %d! \n", PORT);
+  
+  // receive initial message from server
+  char message[1024] = {0};
+  recv(sock, message, sizeof(message),0); 
+  printf("%s", message);
+
   while(1){
     // variable such as message buffers to receive and send messages 
+    
+    printf("@ ");
     fgets(inputStr, sizeof(inputStr), stdin);
+    inputStr[strcspn(inputStr, "\n")] = 0;
     send(sock,inputStr,strlen(inputStr),0); // send input message to server
+
+    // handle exit from client side
+    if (strcmp(inputStr, "exit") == 0) {
+      printf("Closing socket from clientside \n");
+      close(sock);
+      break;
+    }
+
+    // after user input, wait for server response and print server response
+    char response[1024] = {0};
+    recv(sock, response, sizeof(response),0); // receive input string from client
+    printf("%s \n", response);
+
   }
+  printf("Exited \n");
 
 
   close(sock); // close the socket/end the conection
-
 }
 

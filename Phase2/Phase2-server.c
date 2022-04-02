@@ -207,22 +207,6 @@ void readParseInput(char* inputStr) {
 
   int firstIndex = 0, secondIndex = 0, thirdIndex = 0, fourthIndex = 0;
 
-  //create our own shell
-  printf("$ ");
-  //fgets(inputStr, sizeof(inputStr), stdin);
-  inputStr[strcspn(inputStr, "\n")] = 0;
-  printf("\n");
-  if (strcmp(inputStr, "") == 0) { //handle empty command
-    printf("No command entered. Continue... \n");
-    //kill(getppid(), SIGUSR1); //kill the parent process within a child
-    exit(0);
-  }
-  if(strcmp(inputStr, "exit") == 0){ //handle exit command
-    printf("Exit program. Terminating... \n");
-    kill(getppid(), SIGUSR1); //kill the parent process within a child
-    exit(0);
-  }
-
   char* token = strtok(inputStr, " ");
 
   int curCommand = 1;
@@ -366,27 +350,7 @@ int main()
       exit(EXIT_FAILURE);
     }
 
-
-    printf("\n");
-    printf("@@@ Welcome to JS (Jun Sonya) Shell @@@\n");
-    printf("Please type your command into the shell \n");
-    printf("\n");
-    printf("Ideas for commands: \n");
-    printf("--- 3 pipes --- \n");
-    printf("cat words.txt | grep yasin | tee output1.txt | wc -l\n");
-    printf("cat words.txt | uniq | sort | head -10\n");
-    printf("sort alphabets.txt | head -10 | tail -n 5 | tee output3.txt\n");
-    printf("--- 2 pipes --- \n");
-    printf("sort words.txt | head -10 | grep 'a'\n");
-    printf("cat words.txt | grep yasin | wc -l\n");
-    printf("--- 1 pipe --- \n");
-    printf("cat alphabets.txt | tail -10\n");
-    printf("cat words.txt | uniq\n");
-    printf("df | tee disk_usage.txt\n");
-    printf("--- 0 pipes --- \n");
-    printf("... You got this! \n\n");
-    printf("type \"exit\" to quit the program\n");
-
+    printf("Server successfully started at PORT %d \n", PORT);
     
     while(1){
 
@@ -402,25 +366,64 @@ int main()
           exit(EXIT_FAILURE);
         }
 
-        char message[1024] = {0};
-       
-        recv(sock2, message, sizeof(message),0); // receive input string from client
-        printf("Server Received: %s\n", message); // print the received message 
+        // initial message sent to client after successful socket connection
+        char* welcomeMessage = "@@@ Welcome to JS (Jun Sonya) Shell @@@\n"
+        "Please type your command into the shell \n"
+        "\n"
+        "Ideas for commands: \n"
+        "--- 3 pipes --- \n"
+        "cat words.txt | grep yasin | tee output1.txt | wc -l\n"
+        "cat words.txt | uniq | sort | head -10\n"
+        "sort alphabets.txt | head -10 | tail -n 5 | tee output3.txt\n"
+        "--- 2 pipes --- \n"
+        "sort words.txt | head -10 | grep 'a'\n"
+        "cat words.txt | grep yasin | wc -l\n"
+        "--- 1 pipe --- \n"
+        "cat alphabets.txt | tail -10\n"
+        "cat words.txt | uniq\n"
+        "df | tee disk_usage.txt\n"
+        "--- 0 pipes --- \n"
+        "... You got this! \n\n"
+        "type \"exit\" to quit the program\n";
+        send(sock2, welcomeMessage, strlen(welcomeMessage), 0);
 
-        pid_t pid = fork();
-        if(pid < 0){
-          exit(EXIT_FAILURE);
+        while (1) {
+          pid_t pid = fork();
+          if(pid < 0){
+            printf("exit failure \n");
+            exit(EXIT_FAILURE);
+          }
+          else if(pid == 0){ // child process, perform reading from socket here
+            char message[1024] = {0};
+            ssize_t n = recv(sock2, message, sizeof(message),0); // receive input string from client
+
+            printf("Received command: %s \n", message);
+            message[strcspn(message, "\n")] = 0;
+            if (strcmp(message, "") == 0) { //handle empty command
+              printf("No command entered. Continue... \n");
+              //kill(getppid(), SIGUSR1); //kill the parent process within a child
+              exit(0);
+            }
+            if (strcmp(message, "exit") == 0){ //handle exit command
+              printf("Client exited. Terminating session... \n");
+              close(sock2);
+              break;
+            }
+
+            // redirect STDOUT to sock2 , before calling the execvp
+            dup2(sock2, STDOUT_FILENO);  /* duplicate socket on stdout */
+            dup2(sock2, STDERR_FILENO);  /* duplicate socket on stderr too */
+            close(sock2);  /* can close the original after it's duplicated */
+          
+            readParseInput(message);
+            exit(EXIT_SUCCESS);
+          }
+          else{
+            wait(NULL);
+          }
         }
-        else if(pid == 0){
-          readParseInput(message);
-        }
-        else{
-          wait(NULL);
-          continue;
-        }
-        
-        close(sock2);
       }
+      
       
     }
     close(sock1);
