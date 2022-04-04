@@ -395,13 +395,17 @@ int main()
           else if(pid == 0){ // child process, perform reading from socket here
             char message[1024] = {0};
             ssize_t n = recv(sock2, message, sizeof(message),0); // receive input string from client
-
+            
             printf("Received command: %s \n", message);
             message[strcspn(message, "\n")] = 0;
             if (strcmp(message, "") == 0) { //handle empty command
-              printf("No command entered. Continue... \n");
+              printf("empty cmd \n");
+              char* errMessage = "No command entered. Continue... \n";
+              send(sock2, errMessage, strlen(errMessage), 0);
               //kill(getppid(), SIGUSR1); //kill the parent process within a child
-              exit(0);
+              // close(sock2);
+              exit(EXIT_SUCCESS);
+              continue;
             }
             if (strcmp(message, "exit") == 0){ //handle exit command
               printf("Client exited. Terminating session... \n");

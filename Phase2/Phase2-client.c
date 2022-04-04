@@ -58,6 +58,9 @@ int main()
     printf("@ ");
     fgets(inputStr, sizeof(inputStr), stdin);
     inputStr[strcspn(inputStr, "\n")] = 0;
+    if (strlen(inputStr) == 0) {
+      continue;
+    }
     send(sock,inputStr,strlen(inputStr),0); // send input message to server
 
     // handle exit from client side
