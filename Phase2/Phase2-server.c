@@ -341,7 +341,7 @@ int main()
     address.sin_port = htons(PORT);
 
 
-    // attaching socket to addresses (any/all local ip with port 5564)
+    // attaching socket to addresses (any/all local ip with port 5000)
     if (bind(sock1, (struct sockaddr *)&address, sizeof(address)) < 0) 
     // checking if bind fails
     {
