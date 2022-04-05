@@ -414,9 +414,10 @@ int main()
               close(sock2);
               break;
             }
-           
-            char* message_split = strtok(message, " "); //return a pointer
-          
+            char message_copy[1024];
+            strcpy(message_copy, message);
+            char* message_split = strtok(message_copy, " "); //return a pointer
+            printf("%s \n", message);
             if (message_split == NULL) { //handle commands with only blanks
               printf("empty cmd \n");
               char* errMessage = "No command entered. Continue... \n";
