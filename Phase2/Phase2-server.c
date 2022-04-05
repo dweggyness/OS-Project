@@ -400,11 +400,25 @@ int main()
           }
           else if(pid == 0){ // child process, perform reading from socket here
             char message[1024] = {0};
-            ssize_t n = recv(sock2, message, sizeof(message),0); // receive input string from client
+            ssize_t n = recv(sock2, message, sizeof(message),0); 
+            /* 
+            receive input string from client
+            blocking, if it is an empty command, the program will not proceed
+            */
+
             
-            printf("Received command: %s \n", message);
+            printf("Received command: %s \n", message);  
             message[strcspn(message, "\n")] = 0;
-            if (strcmp(message, "") == 0) { //handle empty command
+            
+            if (strcmp(message, "exit") == 0){ //handle exit command
+              printf("Client exited. Terminating session... \n");
+              close(sock2);
+              break;
+            }
+           
+            char* message_split = strtok(message, " "); //return a pointer
+          
+            if (message_split == NULL) { //handle empty command or commands with only blanks
               printf("empty cmd \n");
               char* errMessage = "No command entered. Continue... \n";
               send(sock2, errMessage, strlen(errMessage), 0);
@@ -413,11 +427,7 @@ int main()
               exit(EXIT_SUCCESS);
               continue;
             }
-            if (strcmp(message, "exit") == 0){ //handle exit command
-              printf("Client exited. Terminating session... \n");
-              close(sock2);
-              break;
-            }
+            
 
             // redirect STDOUT to sock2 , before calling the execvp
             dup2(sock2, STDOUT_FILENO);  /* duplicate socket on stdout */
@@ -426,6 +436,7 @@ int main()
           
             readParseInput(message);
             exit(EXIT_SUCCESS);
+
           }
           else{
             wait(NULL);
