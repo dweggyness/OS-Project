@@ -405,8 +405,7 @@ int main()
             receive input string from client
             blocking, if it is an empty command, the program will not proceed
             */
-
-            
+         
             printf("Received command: %s \n", message);  
             message[strcspn(message, "\n")] = 0;
             
@@ -418,7 +417,7 @@ int main()
            
             char* message_split = strtok(message, " "); //return a pointer
           
-            if (message_split == NULL) { //handle empty command or commands with only blanks
+            if (message_split == NULL) { //handle commands with only blanks
               printf("empty cmd \n");
               char* errMessage = "No command entered. Continue... \n";
               send(sock2, errMessage, strlen(errMessage), 0);
