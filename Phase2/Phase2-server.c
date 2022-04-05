@@ -382,7 +382,13 @@ int main()
         "cat words.txt | uniq\n"
         "df | tee disk_usage.txt\n"
         "--- 0 pipes --- \n"
-        "... You got this! \n\n"
+        "cat alphabets.txt\n"
+        "ls -l\n"
+        "man\n"
+        "pwd\n"
+        "echo hello\n"
+        "ps\n"
+        "whoami\n\n"
         "type \"exit\" to quit the program\n";
         send(sock2, welcomeMessage, strlen(welcomeMessage), 0);
 
