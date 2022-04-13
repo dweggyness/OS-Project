@@ -307,24 +307,6 @@ void readParseInput(char* inputStr) {
 
 int main()
 { 
-    // sample command with 3 pipes
-    // cat words.txt | grep yasin | tee output1.txt | wc -l
-    // cat words.txt | uniq | sort | head -10
-    // sort alphabets.txt | head -10 | tail -5 > output3.txt | cat output3.txt
-
-    // sample command with 2 pipe
-    // sort words.txt | head -10 | grep 'a'
-    // cat words.txt | grep yasin | wc -l
-
-    // sample command with 1 pipe
-    // cat alphabets.txt | tail -10
-    // cat words.txt | uniq
-    
-    // sample command with 0 pipes
-    // ls -l
-    // man
-    
-
     int sock1, sock2;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
@@ -341,7 +323,7 @@ int main()
     address.sin_port = htons(PORT);
 
 
-    // attaching socket to addresses (any/all local ip with port 5564)
+    // attaching socket to addresses (any/all local ip with port 5000)
     if (bind(sock1, (struct sockaddr *)&address, sizeof(address)) < 0) 
     // checking if bind fails
     {
@@ -367,7 +349,7 @@ int main()
 
         // initial message sent to client after successful socket connection
         char* welcomeMessage = "@@@ Welcome to JS (Jun Sonya) Shell @@@\n"
-        "Please type your command into the shell \n"
+        "Please type your command into the shell and limit your commands to the below 15\n"
         "\n"
         "Ideas for commands: \n"
         "--- 3 pipes --- \n"
@@ -382,7 +364,13 @@ int main()
         "cat words.txt | uniq\n"
         "df | tee disk_usage.txt\n"
         "--- 0 pipes --- \n"
-        "... You got this! \n\n"
+        "cat alphabets.txt\n"
+        "ls -l\n"
+        "man\n"
+        "pwd\n"
+        "echo hello\n"
+        "ps\n"
+        "whoami\n\n"
         "type \"exit\" to quit the program\n";
         send(sock2, welcomeMessage, strlen(welcomeMessage), 0);
 
@@ -394,11 +382,30 @@ int main()
           }
           else if(pid == 0){ // child process, perform reading from socket here
             char message[1024] = {0};
-            ssize_t n = recv(sock2, message, sizeof(message),0); // receive input string from client
-            
-            printf("Received command: %s \n", message);
+            ssize_t n = recv(sock2, message, sizeof(message),0); 
+            /* 
+            receive input string from client
+            blocking, if it is an empty command, the program will not proceed
+            */
+         
+            printf("Received command: %s \n", message);  
             message[strcspn(message, "\n")] = 0;
-            if (strcmp(message, "") == 0) { //handle empty command
+            
+            //handle exit command
+            if (strcmp(message, "exit") == 0){ 
+              printf("Client exited. Terminating session... \n");
+              close(sock2);
+              break;
+            }
+
+
+            char message_copy[1024];
+            strcpy(message_copy, message);
+            char* message_split = strtok(message_copy, " "); //return a pointer
+            
+
+            //handle commands with only blanks
+            if (message_split == NULL) { 
               printf("empty cmd \n");
               char* errMessage = "No command entered. Continue... \n";
               send(sock2, errMessage, strlen(errMessage), 0);
@@ -407,11 +414,45 @@ int main()
               exit(EXIT_SUCCESS);
               continue;
             }
-            if (strcmp(message, "exit") == 0){ //handle exit command
-              printf("Client exited. Terminating session... \n");
-              close(sock2);
-              break;
-            }
+
+            //limit the commands to the only listed 15
+
+            /* sample command with 3 pipes */
+            // cat words.txt | grep yasin | tee output1.txt | wc -l
+            // cat words.txt | uniq | sort | head -10
+            // sort alphabets.txt | head -10 | tail -n 5 | tee output3.txt
+
+            /* sample command with 2 pipe */
+            // sort words.txt | head -10 | grep 'a'
+            // cat words.txt | grep yasin | wc -l
+
+            /* sample command with 1 pipe */
+            // cat alphabets.txt | tail -10
+            // cat words.txt | uniq
+            // df | tee disk_usage.txt
+
+            /* sample command with 0 pipes */
+            // cat alphabets.txt
+            // ls -l
+            // man
+            // pwd
+            // echo hello
+            // ps
+            // whoami
+
+            if ((strcmp(message_split, "cat") != 0) && (strcmp(message_split, "sort") != 0)
+              && (strcmp(message_split, "sample") != 0) && (strcmp(message_split, "df") != 0) && 
+              (strcmp(message_split, "ls") != 0) && (strcmp(message_split, "man") != 0) &&
+              (strcmp(message_split, "pwd") != 0) && (strcmp(message_split, "echo") != 0) &&
+              (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0)){ 
+              
+              printf("invalid commands \n");
+              char* errMessage = "Command is currently unavailable, change one... \n";
+              send(sock2, errMessage, strlen(errMessage), 0);
+              // close(sock2);
+              exit(EXIT_SUCCESS);
+              continue;
+            }  
 
             // redirect STDOUT to sock2 , before calling the execvp
             dup2(sock2, STDOUT_FILENO);  /* duplicate socket on stdout */
@@ -420,6 +461,7 @@ int main()
           
             readParseInput(message);
             exit(EXIT_SUCCESS);
+
           }
           else{
             wait(NULL);

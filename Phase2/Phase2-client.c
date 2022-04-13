@@ -73,6 +73,7 @@ int main()
     // after user input, wait for server response and print server response
     char response[1024] = {0};
     recv(sock, response, sizeof(response),0); // receive input string from client
+
     printf("%s \n", response);
 
   }
