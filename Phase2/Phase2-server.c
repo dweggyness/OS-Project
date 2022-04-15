@@ -310,6 +310,7 @@ int main()
     int sock1, sock2;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
+      
 
     //create socket file descriptor 
     if((sock1 = socket(AF_INET, SOCK_STREAM, 0)) == 0){
@@ -375,6 +376,13 @@ int main()
         send(sock2, welcomeMessage, strlen(welcomeMessage), 0);
 
         while (1) {
+          int fd[2]; // pipe 1 for getting output from child 1 and giving it to child 2 also
+          
+          if (pipe(fd) < 0) {
+            printf("Fork failed \n");
+            exit(EXIT_FAILURE);
+          }
+  
           pid_t pid = fork();
           if(pid < 0){
             printf("exit failure \n");
@@ -447,24 +455,42 @@ int main()
               (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0)){ 
               
               printf("invalid commands \n");
+
+              // write invalid message to the pipe
               char* errMessage = "Command is currently unavailable, change one... \n";
-              send(sock2, errMessage, strlen(errMessage), 0);
-              // close(sock2);
+              write(fd[1], errMessage, 1024);
+
+              close(fd[1]);  
+              close(fd[0]);  
+              close(sock2);  
               exit(EXIT_SUCCESS);
               continue;
             }  
 
             // redirect STDOUT to sock2 , before calling the execvp
-            dup2(sock2, STDOUT_FILENO);  /* duplicate socket on stdout */
-            dup2(sock2, STDERR_FILENO);  /* duplicate socket on stderr too */
-            close(sock2);  /* can close the original after it's duplicated */
+            dup2(fd[1], STDOUT_FILENO);  /* duplicate socket on stdout */
+            dup2(fd[1], STDERR_FILENO);  /* duplicate socket on stderr too */
+            close(fd[1]);  
+            close(fd[0]);  
+            close(sock2);  
           
             readParseInput(message);
             exit(EXIT_SUCCESS);
 
           }
           else{
+            close(fd[1]);  
             wait(NULL);
+
+            char buf[1024] = {0};
+            int nread = read(fd[0], buf, 1024);
+
+            if (nread > 0) {
+              send(sock2, &buf, sizeof(buf), 0);
+            } else if (nread == 0) { // read from pipe, but its empty. pipe returned no output
+              send(sock2, "", sizeof(""), 0); // send an empty string
+            }
+            close(fd[0]);
           }
         }
       }
