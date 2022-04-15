@@ -6,6 +6,8 @@
 #include <sys/socket.h> // header for socket specific functions and macros declarations
 #include <netinet/in.h> //header for MACROS and structures related to addresses "sockaddr_in", INADDR_ANY 
 #include <arpa/inet.h> // header for functions related to addresses from text to binary form, inet_pton 
+#include <pthread.h> // header for thread functions declarations: pthread_create, pthread_join, pthread_exit
+// compile your code with: gcc -o output code.c -lpthread
 
 #define PORT 5000
 
@@ -305,6 +307,98 @@ void readParseInput(char* inputStr) {
   }
 }
 
+
+// Function that handles the client
+void* HandleClient(void* new_socket)
+{
+
+  pthread_detach(pthread_self()); // detach the thread as we don't need to synchronize/join with the other client threads, their execution/code flow does not depend on our termination/completion 
+  int socket = *(int*)new_socket;
+  free(new_socket);
+  printf("handling new client in a thread using socket: %d\n", socket);
+  printf("Listening to client..\n"); // while printing make sure to end your strings with \n or \0 to flush the stream, other wise if in anyother concurent process is reading from socket/pipe-end with standard input/output redirection, it will keep on waiting for stream to end. 
+    
+  // variable such as message buffers to receive and send messages
+  
+  char message[1024] = {0};
+  recv(socket, message, sizeof(message),0); 
+
+  printf("Received command: %s \n", message);  
+  message[strcspn(message, "\n")] = 0;
+  
+  //handle exit command
+  if (strcmp(message, "exit") == 0){ 
+    printf("Client exited. Terminating session... \n");
+    close(socket);
+  }
+
+
+  char message_copy[1024];
+  strcpy(message_copy, message);
+  char* message_split = strtok(message_copy, " "); //return a pointer
+  
+
+  //handle commands with only blanks
+  if (message_split == NULL) { 
+    printf("empty cmd \n");
+    char* errMessage = "No command entered. Continue... \n";
+    send(socket, errMessage, strlen(errMessage), 0);
+
+    exit(EXIT_SUCCESS);
+  }
+
+  //limit the commands to the only listed 15
+
+  /* sample command with 3 pipes */
+  // cat words.txt | grep yasin | tee output1.txt | wc -l
+  // cat words.txt | uniq | sort | head -10
+  // sort alphabets.txt | head -10 | tail -n 5 | tee output3.txt
+
+  /* sample command with 2 pipe */
+  // sort words.txt | head -10 | grep 'a'
+  // cat words.txt | grep yasin | wc -l
+
+  /* sample command with 1 pipe */
+  // cat alphabets.txt | tail -10
+  // cat words.txt | uniq
+  // df | tee disk_usage.txt
+
+  /* sample command with 0 pipes */
+  // cat alphabets.txt
+  // ls -l
+  // man
+  // pwd
+  // echo hello
+  // ps
+  // whoami
+
+
+  // update if-else conditions and sent -> write
+  if ((strcmp(message_split, "cat") != 0) && (strcmp(message_split, "sort") != 0)
+    && (strcmp(message_split, "sample") != 0) && (strcmp(message_split, "df") != 0) && 
+    (strcmp(message_split, "ls") != 0) && (strcmp(message_split, "man") != 0) &&
+    (strcmp(message_split, "pwd") != 0) && (strcmp(message_split, "echo") != 0) &&
+    (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0)){ 
+    
+    printf("invalid commands \n");
+    char* errMessage = "Command is currently unavailable, change one... \n";
+    send(socket, errMessage, strlen(errMessage), 0);
+    // close(sock2);
+    exit(EXIT_SUCCESS);
+  }  
+
+  // redirect STDOUT to sock2 , before calling the execvp
+  dup2(socket, STDOUT_FILENO);  /* duplicate socket on stdout */
+  dup2(socket, STDERR_FILENO);  /* duplicate socket on stderr too */
+  close(socket);  /* can close the original after it's duplicated */
+
+  readParseInput(message);
+  
+  pthread_exit(NULL);// terminate the thread
+}
+
+
+
 int main()
 { 
     int sock1, sock2;
@@ -374,93 +468,32 @@ int main()
         "type \"exit\" to quit the program\n";
         send(sock2, welcomeMessage, strlen(welcomeMessage), 0);
 
-        while (1) {
+        while (1) { //every client
           pid_t pid = fork();
           if(pid < 0){
             printf("exit failure \n");
             exit(EXIT_FAILURE);
           }
           else if(pid == 0){ // child process, perform reading from socket here
-            char message[1024] = {0};
-            ssize_t n = recv(sock2, message, sizeof(message),0); 
-            /* 
-            receive input string from client
-            blocking, if it is an empty command, the program will not proceed
-            */
-         
-            printf("Received command: %s \n", message);  
-            message[strcspn(message, "\n")] = 0;
             
-            //handle exit command
-            if (strcmp(message, "exit") == 0){ 
-              printf("Client exited. Terminating session... \n");
-              close(sock2);
-              break;
-            }
-
-
-            char message_copy[1024];
-            strcpy(message_copy, message);
-            char* message_split = strtok(message_copy, " "); //return a pointer
+            //create multithread  
             
-
-            //handle commands with only blanks
-            if (message_split == NULL) { 
-              printf("empty cmd \n");
-              char* errMessage = "No command entered. Continue... \n";
-              send(sock2, errMessage, strlen(errMessage), 0);
-              //kill(getppid(), SIGUSR1); //kill the parent process within a child
-              // close(sock2);
-              exit(EXIT_SUCCESS);
-              continue;
+            int rc; // return value from pthread_create to check if new thread is created successfukky                           */
+            pthread_t  thread_id;  // thread's ID (just an integer, typedef unsigned long int) to indetify new thread
+            int* new_socket = (int*)malloc(sizeof(int)); // for passing safely the integer socket to the thread
+            if ( new_socket == NULL ) {
+              fprintf(stderr, "Couldn't allocate memory for thread new socket argument.\n");
+              exit(EXIT_FAILURE);
             }
+            *new_socket = sock2;
 
-            //limit the commands to the only listed 15
-
-            /* sample command with 3 pipes */
-            // cat words.txt | grep yasin | tee output1.txt | wc -l
-            // cat words.txt | uniq | sort | head -10
-            // sort alphabets.txt | head -10 | tail -n 5 | tee output3.txt
-
-            /* sample command with 2 pipe */
-            // sort words.txt | head -10 | grep 'a'
-            // cat words.txt | grep yasin | wc -l
-
-            /* sample command with 1 pipe */
-            // cat alphabets.txt | tail -10
-            // cat words.txt | uniq
-            // df | tee disk_usage.txt
-
-            /* sample command with 0 pipes */
-            // cat alphabets.txt
-            // ls -l
-            // man
-            // pwd
-            // echo hello
-            // ps
-            // whoami
-
-            if ((strcmp(message_split, "cat") != 0) && (strcmp(message_split, "sort") != 0)
-              && (strcmp(message_split, "sample") != 0) && (strcmp(message_split, "df") != 0) && 
-              (strcmp(message_split, "ls") != 0) && (strcmp(message_split, "man") != 0) &&
-              (strcmp(message_split, "pwd") != 0) && (strcmp(message_split, "echo") != 0) &&
-              (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0)){ 
-              
-              printf("invalid commands \n");
-              char* errMessage = "Command is currently unavailable, change one... \n";
-              send(sock2, errMessage, strlen(errMessage), 0);
-              // close(sock2);
-              exit(EXIT_SUCCESS);
-              continue;
-            }  
-
-            // redirect STDOUT to sock2 , before calling the execvp
-            dup2(sock2, STDOUT_FILENO);  /* duplicate socket on stdout */
-            dup2(sock2, STDERR_FILENO);  /* duplicate socket on stderr too */
-            close(sock2);  /* can close the original after it's duplicated */
-          
-            readParseInput(message);
-            exit(EXIT_SUCCESS);
+            // create a new thread that will handle the communication with the newly accepted client
+            rc = pthread_create(&thread_id, NULL, HandleClient, new_socket);  
+            if(rc)      // if rc is > 0 imply could not create new thread 
+            {
+              printf("\n ERROR: return code from pthread_create is %d \n", rc);
+              exit(EXIT_FAILURE);
+            }
 
           }
           else{
