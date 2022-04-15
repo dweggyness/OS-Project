@@ -452,7 +452,8 @@ int main()
               && (strcmp(message_split, "sample") != 0) && (strcmp(message_split, "df") != 0) && 
               (strcmp(message_split, "ls") != 0) && (strcmp(message_split, "man") != 0) &&
               (strcmp(message_split, "pwd") != 0) && (strcmp(message_split, "echo") != 0) &&
-              (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0)){ 
+              (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0) &&
+              (strcmp(message_split, "./Test.o") != 0)) { 
               
               printf("invalid commands \n");
 
