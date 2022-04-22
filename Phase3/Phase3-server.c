@@ -393,19 +393,28 @@ void* HandleClient(void* new_socket)
         && (strcmp(message_split, "sample") != 0) && (strcmp(message_split, "df") != 0) && 
         (strcmp(message_split, "ls") != 0) && (strcmp(message_split, "man") != 0) &&
         (strcmp(message_split, "pwd") != 0) && (strcmp(message_split, "echo") != 0) &&
-        (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0)){ 
+        (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0) &&
+        (strcmp(message_split, "./Test.o") != 0)) { 
         
         printf("invalid commands \n");
+
+        // write invalid message to the pipe
         char* errMessage = "Command is currently unavailable, change one... \n";
-        send(socket, errMessage, strlen(errMessage), 0);
-        // close(sock2);
+        write(fd[1], errMessage, 1024);
+
+        close(fd[1]);  
+        close(fd[0]);  
+        close(socket);  
         exit(EXIT_SUCCESS);
+        continue;
       }  
 
       // redirect STDOUT to sock2 , before calling the execvp
-      dup2(socket, STDOUT_FILENO);  /* duplicate socket on stdout */
-      dup2(socket, STDERR_FILENO);  /* duplicate socket on stderr too */
-      close(socket);  /* can close the original after it's duplicated */
+      dup2(fd[1], STDOUT_FILENO);  /* duplicate socket on stdout */
+      dup2(fd[1], STDERR_FILENO);  /* duplicate socket on stderr too */
+      close(fd[1]);  
+      close(fd[0]);  
+      close(socket);  
 
       readParseInput(message);
       exit(EXIT_SUCCESS);
