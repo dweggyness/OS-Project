@@ -311,13 +311,10 @@ void readParseInput(char* inputStr) {
 // Function that handles the client
 void* HandleClient(void* new_socket)
 {
-
   pthread_detach(pthread_self()); // detach the thread as we don't need to synchronize/join with the other client threads, their execution/code flow does not depend on our termination/completion 
   int socket = *(int*)new_socket;
   free(new_socket);
   printf("handling new client in a thread using socket: %d\n", socket);
-  printf("Listening to client..\n"); // while printing make sure to end your strings with \n or \0 to flush the stream, other wise if in anyother concurent process is reading from socket/pipe-end with standard input/output redirection, it will keep on waiting for stream to end. 
-    
   
   // initial message sent to client after successful socket connection
   char* welcomeMessage = "@@@ Welcome to JS (Jun Sonya) Shell @@@\n"
@@ -364,8 +361,7 @@ void* HandleClient(void* new_socket)
     else if(pid == 0) {
       char message[1024] = {0};
       recv(socket, message, sizeof(message),0); 
-
-      printf("Received command: %s \n", message);  
+      
       message[strcspn(message, "\n")] = 0;
       
       //handle exit command
@@ -410,6 +406,7 @@ void* HandleClient(void* new_socket)
       }  
 
       // redirect STDOUT to sock2 , before calling the execvp
+
       dup2(fd[1], STDOUT_FILENO);  /* duplicate socket on stdout */
       dup2(fd[1], STDERR_FILENO);  /* duplicate socket on stderr too */
       close(fd[1]);  
@@ -426,12 +423,11 @@ void* HandleClient(void* new_socket)
       int nread = read(fd[0], buf, 1024);
 
       if (nread > 0) {
-        printf("Sending VAlid Buffer \n");
         send(socket, &buf, sizeof(buf), 0);
       } else if (nread == 0) { // read from pipe, but its empty. pipe returned no output
-        printf("Sending Empty Buffer \n");
         send(socket, "", sizeof(""), 0); // send an empty string
       }
+
       close(fd[0]);
     }
   }
@@ -469,40 +465,48 @@ int main()
 
     printf("Server successfully started at PORT %d \n", PORT);
     
-    while(1){
-
+    while(1) {
       if (listen(sock1, 10) < 0) // defining for socket length of queue for pending client connections
       {
         perror("Listen Failed");
         exit(EXIT_FAILURE);
       }
-      while ((sock2 = accept(sock1, (struct sockaddr *)&address,(socklen_t *)&addrlen))) 
-      {// accepting the client connection with creation/return of a new socket for the established connection to enable dedicated communication (active communication on a new socket) with the client
-        if(sock2 < 0){
-          perror("accept");
-          exit(EXIT_FAILURE);
-        }
+    
+      if ((sock2 = accept(sock1, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) // accepting the client connection with creation/return of a new socket for the established connection to enable dedicated communication (active communication on a new socket) with the client
+      {
+        perror("accept");
+        exit(EXIT_FAILURE);
+      }
 
           //create multithread  
         
-        int rc; // return value from pthread_create to check if new thread is created successfukky                           */
-        pthread_t  thread_id;  // thread's ID (just an integer, typedef unsigned long int) to indetify new thread
-        int* new_socket = (int*)malloc(sizeof(int)); // for passing safely the integer socket to the thread
-        if ( new_socket == NULL ) {
-          fprintf(stderr, "Couldn't allocate memory for thread new socket argument.\n");
-          exit(EXIT_FAILURE);
-        }
-        *new_socket = sock2;
+      int rc; // return value from pthread_create to check if new thread is created successfukky                           */
+      pthread_t  thread_id;  // thread's ID (just an integer, typedef unsigned long int) to indetify new thread
+      int* new_socket = (int*)malloc(sizeof(int)); // for passing safely the integer socket to the thread
+      if ( new_socket == NULL ) {
+        fprintf(stderr, "Couldn't allocate memory for thread new socket argument.\n");
+        exit(EXIT_FAILURE);
+      }
+      *new_socket = sock2;
 
-        // create a new thread that will handle the communication with the newly accepted client
+      // create a new thread that will handle the communication with the newly accepted client
+      
+      pid_t pid = fork();
+      if(pid < 0){
+        printf("exit failure \n");
+        exit(EXIT_FAILURE);
+      } else if (pid == 0) {
         rc = pthread_create(&thread_id, NULL, HandleClient, new_socket);  
         if(rc)      // if rc is > 0 imply could not create new thread 
         {
           printf("\n ERROR: return code from pthread_create is %d \n", rc);
           exit(EXIT_FAILURE);
         }
+      } else {
       }
+
     }
+
     close(sock1);
     
     return 0;
