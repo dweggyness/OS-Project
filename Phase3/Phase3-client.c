@@ -78,8 +78,8 @@ int main()
     // handle exit from client side
     if (strcmp(inputStr, "exit") == 0) {
       printf("Closing socket from clientside \n");
-      close(sock);
       send(sock,inputStr,strlen(inputStr),0); // send exit message to server
+      close(sock);
       exit(0);
     }
 
