@@ -7,10 +7,18 @@
 #include <netinet/in.h> //header for MACROS and structures related to addresses "sockaddr_in", INADDR_ANY 
 #include <arpa/inet.h> // header for functions related to addresses from text to binary form, inet_pton 
 #include <pthread.h> // header for thread functions declarations: pthread_create, pthread_join, pthread_exit
+#include <signal.h> // header for signal related functions and macros declarations
 // compile your code with: gcc -o output code.c -lpthread
 
 #define PORT 5000
 
+// function routine of Signal Handler for SIGINT, to terminate all the threads which will all be terminated as we are calling exit of a process instead of pthread_exit
+void serverExitHandler(int sig_num)
+{
+    printf("\n server exit  \n");
+    fflush(stdout);// force to flush any data in buffers to the file descriptor of standard output,, a pretty convinent function
+    exit(0);
+}
 
 void processpipeline1CMD(char *firstcommand[])
 {
@@ -361,14 +369,23 @@ void* HandleClient(void* new_socket)
     else if(pid == 0) {
       char message[1024] = {0};
       recv(socket, message, sizeof(message),0); 
-      
+
+      printf("Received command: %s \n", message);  
       message[strcspn(message, "\n")] = 0;
       
       //handle exit command
       if (strcmp(message, "exit") == 0){ 
         printf("Client exited. Terminating session... \n");
         close(socket);
-        break;
+        pthread_exit(NULL);// terminate the thread
+      }
+
+      if (strcmp(message,"exit_client") == 0)
+      {
+        printf("closing the client communication socket : %d and terminating the corresponding thread. \n", socket);
+        close(socket); // close the conneciton with client
+        // break the infinite loop so that this thread could be terminated
+        pthread_exit(NULL);// terminate the thread
       }
 
       char message_copy[1024];
@@ -417,17 +434,18 @@ void* HandleClient(void* new_socket)
       exit(EXIT_SUCCESS);
     } else {
       close(fd[1]);  
-      wait(NULL);
+      //wait(NULL);
 
       char buf[1024] = {0};
       int nread = read(fd[0], buf, 1024);
 
       if (nread > 0) {
+        printf("Sending Valid Buffer \n\n");
         send(socket, &buf, sizeof(buf), 0);
       } else if (nread == 0) { // read from pipe, but its empty. pipe returned no output
+        printf("Sending Empty Buffer \n\n");
         send(socket, "", sizeof(""), 0); // send an empty string
       }
-
       close(fd[0]);
     }
   }
@@ -439,12 +457,13 @@ void* HandleClient(void* new_socket)
 
 int main()
 { 
+    signal(SIGINT, serverExitHandler);
     int sock1, sock2;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
 
     //create socket file descriptor 
-    if((sock1 = socket(AF_INET, SOCK_STREAM, 0)) == 0){
+    if((sock1 = socket(AF_INET, SOCK_STREAM, 0)) < 0){
       perror("socket failed");
       exit(EXIT_FAILURE);
     }
@@ -464,13 +483,14 @@ int main()
     }
 
     printf("Server successfully started at PORT %d \n", PORT);
-    
+
+    if (listen(sock1, 10) < 0) // defining for socket length of queue for pending client connections
+    {
+      perror("Listen Failed");
+      exit(EXIT_FAILURE);
+    }
+
     while(1) {
-      if (listen(sock1, 10) < 0) // defining for socket length of queue for pending client connections
-      {
-        perror("Listen Failed");
-        exit(EXIT_FAILURE);
-      }
     
       if ((sock2 = accept(sock1, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) // accepting the client connection with creation/return of a new socket for the established connection to enable dedicated communication (active communication on a new socket) with the client
       {
@@ -491,19 +511,26 @@ int main()
 
       // create a new thread that will handle the communication with the newly accepted client
       
-      pid_t pid = fork();
-      if(pid < 0){
-        printf("exit failure \n");
+      // pid_t pid = fork();
+      // if(pid < 0){
+      //     printf("exit failure \n");
+      //     exit(EXIT_FAILURE);
+      //   } else if (pid == 0) {
+      //     rc = pthread_create(&thread_id, NULL, HandleClient, new_socket);  
+      //     if(rc)      // if rc is > 0 imply could not create new thread 
+      //     {
+      //       printf("\n ERROR: return code from pthread_create is %d \n", rc);
+      //       exit(EXIT_FAILURE);
+      //     }
+      //   } else {
+      // }
+      rc = pthread_create(&thread_id, NULL, HandleClient, new_socket);  
+      if(rc)      // if rc is > 0 imply could not create new thread 
+      {
+        printf("\n ERROR: return code from pthread_create is %d \n", rc);
         exit(EXIT_FAILURE);
-      } else if (pid == 0) {
-        rc = pthread_create(&thread_id, NULL, HandleClient, new_socket);  
-        if(rc)      // if rc is > 0 imply could not create new thread 
-        {
-          printf("\n ERROR: return code from pthread_create is %d \n", rc);
-          exit(EXIT_FAILURE);
-        }
-      } else {
       }
+
 
     }
 
