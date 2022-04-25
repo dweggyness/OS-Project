@@ -77,10 +77,9 @@ int main()
    
     // handle exit from client side
     if (strcmp(inputStr, "exit") == 0) {
-      printf("Closing socket from clientside \n");
+      printf("Closing socket from client side \n");
       send(sock,inputStr,strlen(inputStr),0); // send exit message to server
-      close(sock);
-      exit(0);
+      break;
     }
 
     send(sock,inputStr,strlen(inputStr),0); // send input message to server

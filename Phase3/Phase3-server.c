@@ -354,7 +354,7 @@ void* HandleClient(void* new_socket)
   // variable such as message buffers to receive and send messages
   
   while (1) {
-    int fd[2]; // pipe 1 for getting output from child 1 and giving it to child 2 also
+    int fd[2]; // pipe 1 for getting output from child 1 and giving it to child 2
     
     if (pipe(fd) < 0) {
       printf("Pipe failed \n");
@@ -422,7 +422,7 @@ void* HandleClient(void* new_socket)
         continue;
       }  
 
-      // redirect STDOUT to sock2 , before calling the execvp
+      // redirect STDOUT to sock2 , before calling the execvp for valid commands
 
       dup2(fd[1], STDOUT_FILENO);  /* duplicate socket on stdout */
       dup2(fd[1], STDERR_FILENO);  /* duplicate socket on stderr too */
@@ -432,7 +432,8 @@ void* HandleClient(void* new_socket)
 
       readParseInput(message);
       exit(EXIT_SUCCESS);
-    } else {
+
+    } else { //parent process under a thread, run only when input is "exit"
       close(fd[1]);  
       //wait(NULL);
 
@@ -525,6 +526,7 @@ int main()
       //   } else {
       // }
       rc = pthread_create(&thread_id, NULL, HandleClient, new_socket);  
+
       if(rc)      // if rc is > 0 imply could not create new thread 
       {
         printf("\n ERROR: return code from pthread_create is %d \n", rc);
