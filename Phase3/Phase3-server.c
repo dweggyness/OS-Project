@@ -7,10 +7,19 @@
 #include <netinet/in.h> //header for MACROS and structures related to addresses "sockaddr_in", INADDR_ANY 
 #include <arpa/inet.h> // header for functions related to addresses from text to binary form, inet_pton 
 #include <pthread.h> // header for thread functions declarations: pthread_create, pthread_join, pthread_exit
+#include <signal.h> // header for signal related functions and macros declarations
 // compile your code with: gcc -o output code.c -lpthread
 
 #define PORT 5000
 
+
+// function routine of Signal Handler for SIGINT, to terminate all the threads which will all be terminated as we are calling exit of a process instead of pthread_exit
+void serverExitHandler(int sig_num)
+{
+    printf("\n server exit  \n");
+    fflush(stdout);// force to flush any data in buffers to the file descriptor of standard output,, a pretty convinent function
+    exit(0);
+}
 
 void processpipeline1CMD(char *firstcommand[])
 {
@@ -323,6 +332,7 @@ void* HandleClient(void* new_socket)
   char message[1024] = {0};
   recv(socket, message, sizeof(message),0); 
 
+<<<<<<< Updated upstream
   printf("Received command: %s \n", message);  
   message[strcspn(message, "\n")] = 0;
   
@@ -331,6 +341,34 @@ void* HandleClient(void* new_socket)
     printf("Client exited. Terminating session... \n");
     close(socket);
   }
+=======
+    pid_t pid = fork();
+    if(pid < 0){
+      printf("exit failure \n");
+      exit(EXIT_FAILURE);
+    }
+    else if(pid == 0) {
+      char message[1024] = {0};
+      recv(socket, message, sizeof(message),0); 
+
+      printf("Received command: %s \n", message);  
+      message[strcspn(message, "\n")] = 0;
+      
+      //handle exit command
+      if (strcmp(message, "exit") == 0){ 
+        printf("Client exited. Terminating session... \n");
+        close(socket);
+        pthread_exit(NULL);// terminate the thread
+      }
+
+      if (strcmp(message,"exit_client") == 0)
+      {
+        printf("closing the client communication socket : %d and terminating the corresponding thread. \n", socket);
+        close(socket); // close the conneciton with client
+        // break the infinite loop so that this thread could be terminated
+         pthread_exit(NULL);// terminate the thread
+      }
+>>>>>>> Stashed changes
 
 
   char message_copy[1024];
@@ -338,6 +376,7 @@ void* HandleClient(void* new_socket)
   char* message_split = strtok(message_copy, " "); //return a pointer
   
 
+<<<<<<< Updated upstream
   //handle commands with only blanks
   if (message_split == NULL) { 
     printf("empty cmd \n");
@@ -345,6 +384,59 @@ void* HandleClient(void* new_socket)
     send(socket, errMessage, strlen(errMessage), 0);
 
     exit(EXIT_SUCCESS);
+=======
+      }
+
+      // update if-else conditions and sent -> write
+      if ((strcmp(message_split, "cat") != 0) && (strcmp(message_split, "sort") != 0)
+        && (strcmp(message_split, "sample") != 0) && (strcmp(message_split, "df") != 0) && 
+        (strcmp(message_split, "ls") != 0) && (strcmp(message_split, "man") != 0) &&
+        (strcmp(message_split, "pwd") != 0) && (strcmp(message_split, "echo") != 0) &&
+        (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0) &&
+        (strcmp(message_split, "./Test.o") != 0)) { 
+        
+        printf("invalid commands \n");
+
+        // write invalid message to the pipe
+        char* errMessage = "Command is currently unavailable, change one... \n";
+        write(fd[1], errMessage, 1024);
+
+        close(fd[1]);  
+        close(fd[0]);  
+        close(socket);  
+        exit(EXIT_SUCCESS);
+        continue;
+      }  
+
+      // redirect STDOUT to sock2 , before calling the execvp
+      dup2(fd[1], STDOUT_FILENO);  /* duplicate socket on stdout */
+      dup2(fd[1], STDERR_FILENO);  /* duplicate socket on stderr too */
+      close(fd[1]);  
+      close(fd[0]);  
+      close(socket);  
+
+      readParseInput(message);
+      exit(EXIT_SUCCESS);
+
+    } else {
+
+
+      close(fd[1]);  
+      wait(NULL);
+
+      char buf[1024] = {0};
+      int nread = read(fd[0], buf, 1024);
+
+      if (nread > 0) {
+        printf("Sending Valid Buffer \n\n");
+        send(socket, &buf, sizeof(buf), 0);
+      } else if (nread == 0) { // read from pipe, but its empty. pipe returned no output
+        printf("Sending Empty Buffer \n\n");
+        send(socket, "", sizeof(""), 0); // send an empty string
+      }
+      close(fd[0]);
+    }
+>>>>>>> Stashed changes
   }
 
   //limit the commands to the only listed 15
@@ -401,6 +493,7 @@ void* HandleClient(void* new_socket)
 
 int main()
 { 
+    signal(SIGINT, serverExitHandler);
     int sock1, sock2;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
@@ -434,12 +527,12 @@ int main()
         perror("Listen Failed");
         exit(EXIT_FAILURE);
       }
-      while ((sock2 = accept(sock1, (struct sockaddr *)&address,(socklen_t *)&addrlen))) 
-      {// accepting the client connection with creation/return of a new socket for the established connection to enable dedicated communication (active communication on a new socket) with the client
-        if(sock2 < 0){
-          perror("accept");
-          exit(EXIT_FAILURE);
-        }
+      if ((sock2 = accept(sock1, (struct sockaddr *)&address,
+       (socklen_t *)&addrlen)) < 0) // accepting the client connection with creation/return of a new socket for the established connection to enable dedicated communication (active communication on a new socket) with the client
+      {
+        perror("accept");
+        exit(EXIT_FAILURE);
+      }
 
         // initial message sent to client after successful socket connection
         char* welcomeMessage = "@@@ Welcome to JS (Jun Sonya) Shell @@@\n"
@@ -486,11 +579,15 @@ int main()
           printf("\n ERROR: return code from pthread_create is %d \n", rc);
           exit(EXIT_FAILURE);
         }
+<<<<<<< Updated upstream
 
         //}
       }
       
       
+=======
+      //}
+>>>>>>> Stashed changes
     }
     close(sock1);
     
