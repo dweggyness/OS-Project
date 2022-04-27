@@ -13,7 +13,7 @@ int sock = 0;
 // function routine of Signal Handler for SIGINT, to send connection termination message to server and terminates the client process
 void clientExitHandler(int sig_num)
 {
-  send(sock,"exit_client",strlen("exit_client"),0); // sending exit message to server
+  send(sock,"exit_client",strlen("exit"),0); // sending exit message to server
   close(sock); // close the socket/end the conection
   printf("Exiting client.  \n");
   fflush(stdout);// force to flush any data in buffers to the file descriptor of standard output,, a pretty convinent function

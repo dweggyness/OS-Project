@@ -10,6 +10,12 @@
 #include <signal.h> // header for signal related functions and macros declarations
 // compile your code with: gcc -o output code.c -lpthread
 
+typedef struct pthread_arg_t {
+    int new_socket_fd;
+    struct sockaddr_in client_address;
+} pthread_arg_t;
+
+#define NUM_CLIENTS 10
 #define PORT 5000
 
 // function routine of Signal Handler for SIGINT, to terminate all the threads which will all be terminated as we are calling exit of a process instead of pthread_exit
@@ -317,11 +323,11 @@ void readParseInput(char* inputStr) {
 
 
 // Function that handles the client
-void* HandleClient(void* new_socket)
+void* HandleClient(void* arg)
 {
-  pthread_detach(pthread_self()); // detach the thread as we don't need to synchronize/join with the other client threads, their execution/code flow does not depend on our termination/completion 
-  int socket = *(int*)new_socket;
-  free(new_socket);
+  pthread_arg_t *pthread_arg = (pthread_arg_t *)arg;
+  int socket = pthread_arg->new_socket_fd;
+  free(arg);
   printf("handling new client in a thread using socket: %d\n", socket);
   
   // initial message sent to client after successful socket connection
@@ -377,15 +383,11 @@ void* HandleClient(void* new_socket)
       if (strcmp(message, "exit") == 0){ 
         printf("Client exited. Terminating session... \n");
         close(socket);
-        pthread_exit(NULL);// terminate the thread
-      }
 
-      if (strcmp(message,"exit_client") == 0)
-      {
-        printf("closing the client communication socket : %d and terminating the corresponding thread. \n", socket);
-        close(socket); // close the conneciton with client
-        // break the infinite loop so that this thread could be terminated
-        pthread_exit(NULL);// terminate the thread
+        char* message = "exit";
+        
+        write(fd[1], message, 1024);
+        exit(EXIT_SUCCESS);
       }
 
       char message_copy[1024];
@@ -396,7 +398,11 @@ void* HandleClient(void* new_socket)
       if (message_split == NULL) { 
         printf("empty cmd \n");
         char* errMessage = "No command entered. Continue... \n";
-        send(socket, errMessage, strlen(errMessage), 0);
+        
+        write(fd[1], errMessage, 1024);
+        close(fd[1]);  
+        close(fd[0]);  
+        close(socket);  
 
         exit(EXIT_SUCCESS);
       }
@@ -419,7 +425,6 @@ void* HandleClient(void* new_socket)
         close(fd[0]);  
         close(socket);  
         exit(EXIT_SUCCESS);
-        continue;
       }  
 
       // redirect STDOUT to sock2 , before calling the execvp for valid commands
@@ -440,6 +445,11 @@ void* HandleClient(void* new_socket)
       char buf[1024] = {0};
       int nread = read(fd[0], buf, 1024);
 
+      // if command is to exit, we exit
+      if (strcmp(buf, "exit") == 0) {
+        pthread_exit(NULL);
+      }
+
       if (nread > 0) {
         printf("Sending Valid Buffer \n\n");
         send(socket, &buf, sizeof(buf), 0);
@@ -458,85 +468,86 @@ void* HandleClient(void* new_socket)
 
 int main()
 { 
-    signal(SIGINT, serverExitHandler);
-    int sock1, sock2;
+    int socket_fd, new_socket_fd;
     struct sockaddr_in address;
-    int addrlen = sizeof(address);
+    pthread_attr_t pthread_attr;
+    pthread_t pthread;
+    socklen_t client_address_len;
 
-    //create socket file descriptor 
-    if((sock1 = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-      perror("socket failed");
-      exit(EXIT_FAILURE);
+    /* Initialise IPv4 address. */
+    memset(&address, 0, sizeof address);
+    address.sin_family = AF_INET;
+    address.sin_port = htons(PORT);
+    address.sin_addr.s_addr = INADDR_ANY;
+
+    /* Create TCP socket. */
+    if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        perror("socket");
+        exit(1);
     }
 
-    // setting the address to be bind to socket
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_ANY);
-    address.sin_port = htons(PORT);
+    /* Assign signal handlers to signals. */
+    if (signal(SIGINT, serverExitHandler) == SIG_ERR) {
+        perror("signal");
+        exit(1);
+    }
 
+    /* Bind address to socket. */
+    if (bind(socket_fd, (struct sockaddr *)&address, sizeof address) == -1) {
+        perror("bind");
+        exit(1);
+    }
 
-    // attaching socket to addresses (any/all local ip with port 5000)
-    if (bind(sock1, (struct sockaddr *)&address, sizeof(address)) < 0) 
-    // checking if bind fails
-    {
-      perror("bind failed");
-      exit(EXIT_FAILURE);
+    /* Listen on socket. */
+    if (listen(socket_fd, NUM_CLIENTS) == -1) {
+        perror("listen");
+        exit(1);
     }
 
     printf("Server successfully started at PORT %d \n", PORT);
 
-    if (listen(sock1, 10) < 0) // defining for socket length of queue for pending client connections
-    {
-      perror("Listen Failed");
-      exit(EXIT_FAILURE);
+    /* Initialise pthread attribute to create detached threads. */
+    if (pthread_attr_init(&pthread_attr) != 0) {
+        perror("pthread_attr_init");
+        exit(1);
     }
+    if (pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED) != 0) {
+        perror("pthread_attr_setdetachstate");
+        exit(1);
+    }
+
+    pthread_arg_t *pthread_arg;
 
     while(1) {
-    
-      if ((sock2 = accept(sock1, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) // accepting the client connection with creation/return of a new socket for the established connection to enable dedicated communication (active communication on a new socket) with the client
-      {
-        perror("accept");
-        exit(EXIT_FAILURE);
+      printf("New client! \n");
+      pthread_arg = (pthread_arg_t *)malloc(sizeof *pthread_arg);
+      if (!pthread_arg) {
+          perror("malloc");
+          continue;
       }
 
-          //create multithread  
-        
-      int rc; // return value from pthread_create to check if new thread is created successfukky                           */
-      pthread_t  thread_id;  // thread's ID (just an integer, typedef unsigned long int) to indetify new thread
-      int* new_socket = (int*)malloc(sizeof(int)); // for passing safely the integer socket to the thread
-      if ( new_socket == NULL ) {
-        fprintf(stderr, "Couldn't allocate memory for thread new socket argument.\n");
-        exit(EXIT_FAILURE);
-      }
-      *new_socket = sock2;
-
-      // create a new thread that will handle the communication with the newly accepted client
-      
-      // pid_t pid = fork();
-      // if(pid < 0){
-      //     printf("exit failure \n");
-      //     exit(EXIT_FAILURE);
-      //   } else if (pid == 0) {
-      //     rc = pthread_create(&thread_id, NULL, HandleClient, new_socket);  
-      //     if(rc)      // if rc is > 0 imply could not create new thread 
-      //     {
-      //       printf("\n ERROR: return code from pthread_create is %d \n", rc);
-      //       exit(EXIT_FAILURE);
-      //     }
-      //   } else {
-      // }
-      rc = pthread_create(&thread_id, NULL, HandleClient, new_socket);  
-
-      if(rc)      // if rc is > 0 imply could not create new thread 
-      {
-        printf("\n ERROR: return code from pthread_create is %d \n", rc);
-        exit(EXIT_FAILURE);
+      /* Accept connection to client. */
+      client_address_len = sizeof pthread_arg->client_address;
+      new_socket_fd = accept(socket_fd, (struct sockaddr *)&pthread_arg->client_address, &client_address_len);
+      if (new_socket_fd == -1) {
+          perror("accept");
+          free(pthread_arg);
+          continue;
       }
 
+      /* Initialise pthread argument. */
+      pthread_arg->new_socket_fd = new_socket_fd;
+      /* TODO: Initialise arguments passed to threads here. See lines 22 and
+        * 139.
+        */
 
+      /* Create thread to serve connection to client. */
+      if (pthread_create(&pthread, &pthread_attr, HandleClient, (void *)pthread_arg) != 0) {
+          perror("pthread_create");
+          free(pthread_arg);
+          continue;
+      }
     }
-
-    close(sock1);
     
     return 0;
 }
