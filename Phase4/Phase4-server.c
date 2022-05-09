@@ -25,7 +25,7 @@ struct Node {
 
 struct Node* head = NULL;
 head = (struct Node*)malloc(sizeof(struct Node));
-
+struct Node* permanentHead = head;
 
 // sem_t *semaphore;
 // semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
@@ -387,6 +387,27 @@ void readParseInput(char* inputStr) {
 }
 
 
+struct Node* getSmallestJob(struct Node* n){
+  // allocate a new node in a heap using `malloc()` and set its data
+  int min = INT_MAX;
+  pid_t minID;
+  while (n != NULL) {
+    if(n->jobTimeRemaining < min){
+      min = n->jobTimeRemaining;
+      minID = getid();
+    }
+    n = n->next;
+  }
+  n = permanentHead;
+  while(n != NULL){
+    if(n->threadID == minID){
+      return n;
+    }
+  }
+
+  return n;
+}
+
 // Function that handles the client
 void* HandleClient(void* arg)
 {
@@ -475,6 +496,26 @@ void* HandleClient(void* arg)
 
         exit(EXIT_SUCCESS);
       }
+
+
+      //handle dummy program with process queue
+      if (strcmp(message, "./dummyProgram") == 0){ 
+        printf("Simulating running dummyProgram \n");
+        struct Node* process = NULL;
+        process = (struct Node*)malloc(sizeof(struct Node));
+        head -> next = process;
+
+        process->threadID = getid();
+        process->jobTimeRemaining = execvp(message);
+        process->roundNumber = 0;
+        process->sema = semaphore;
+
+        head = process;
+
+        //write(fd[1], message, 1024);
+        //exit(EXIT_SUCCESS);
+      }
+
       // update if-else conditions and sent -> write
       if ((strcmp(message_split, "cat") != 0) && (strcmp(message_split, "sort") != 0)
         && (strcmp(message_split, "sample") != 0) && (strcmp(message_split, "df") != 0) && 
