@@ -17,7 +17,6 @@ int main(int argc, char *argv[])
   sem_t *semaphore;
   semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
   while(1) {
-    // get semaphore 
     int semaphore_val = 1;
     int returnValue = sem_getvalue(semaphore, &semaphore_val);
 
@@ -28,7 +27,7 @@ int main(int argc, char *argv[])
       if (jobTimeRemaining <= 0) { // job complete
         return 0;
       }
-      
+
       sleep(1);
     } else {
       return jobTimeRemaining;
