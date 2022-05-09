@@ -10,6 +10,17 @@
 #include <signal.h> // header for signal related functions and macros declarations
 // compile your code with: gcc -o output code.c -lpthread
 
+// A linked list node for process queue
+struct Node {
+    pid_t thread_id;
+    int job_remain;
+    int round_nb;
+    //semaphore
+
+    struct Node* next;
+};
+
+
 typedef struct pthread_arg_t {
     int new_socket_fd;
     struct sockaddr_in client_address;
@@ -17,6 +28,7 @@ typedef struct pthread_arg_t {
 
 #define NUM_CLIENTS 10
 #define PORT 5000
+
 
 // function routine of Signal Handler for SIGINT, to terminate all the threads which will all be terminated as we are calling exit of a process instead of pthread_exit
 void serverExitHandler(int sig_num)
@@ -353,6 +365,7 @@ void* HandleClient(void* arg)
   "pwd\n"
   "echo hello\n"
   "ps\n"
+  "gcc -o test test.c && ./test\n"
   "whoami\n\n"
   "type \"exit\" to quit the program\n";
   send(socket, welcomeMessage, strlen(welcomeMessage), 0);
@@ -537,9 +550,6 @@ int main()
 
       /* Initialise pthread argument. */
       pthread_arg->new_socket_fd = new_socket_fd;
-      /* TODO: Initialise arguments passed to threads here. See lines 22 and
-        * 139.
-        */
 
       /* Create thread to serve connection to client. */
       if (pthread_create(&pthread, &pthread_attr, HandleClient, (void *)pthread_arg) != 0) {
@@ -547,6 +557,7 @@ int main()
           free(pthread_arg);
           continue;
       }
+
     }
     
     return 0;
