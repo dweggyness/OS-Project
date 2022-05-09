@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <fcntl.h> 
+#include <semaphore.h>
 #include <sys/socket.h> // header for socket specific functions and macros declarations
 #include <netinet/in.h> //header for MACROS and structures related to addresses "sockaddr_in", INADDR_ANY 
 #include <arpa/inet.h> // header for functions related to addresses from text to binary form, inet_pton 
@@ -226,6 +228,49 @@ void processpipeline4CMD(char *firstcommand[], char *secondcommand[] , char *thi
 
 
 
+void SchedulerFunction() {
+  sem_t *programSemaphore;
+  programSemaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
+
+  int quantum = 0;
+  int currentRunningThread = 5; // current node/thread
+  while(1) {
+    sleep(1);
+    if (1) continue; // processQueue.empty())
+  
+    if (quantum <= 0) { // quantum has ended, stop the current thread and select next process
+      // stop currently running node
+      sem_t *currentSemaphore = 1; // currentRunningThread.semaphore);
+      sem_wait(currentSemaphore); // stop currently running semaphore
+      sem_wait(programSemaphore); // stop currently running dummy program
+
+      // select the next node to run
+      int node = 5; // node = processQueue.getNodeWithSRT();
+      sem_t *threadSemaphore = 1; // node.semaphore;
+      sem_post(threadSemaphore); // release the semaphore for the thread, it is now running
+      sem_post(programSemaphore); // allow dummyprogram to run
+      int threadRoundNum = 2; // depending on round number, different quantum
+      switch(threadRoundNum) {
+        case 1: 
+          quantum = 3;
+          break;
+        case 2:
+          quantum = 7;
+          break;
+        default:
+          quantum = 3;
+          if(threadRoundNum > 2) {
+            quantum = 10;
+          }
+          break;
+      }
+    } else { // quantum > 0, keep running
+      quantum--;
+    }
+  }
+
+  return;
+}
 
 // parser for input, supports up to 3 pipes ( 4 commands )
 
