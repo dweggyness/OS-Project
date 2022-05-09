@@ -12,6 +12,21 @@
 #include <signal.h> // header for signal related functions and macros declarations
 // compile your code with: gcc -o output code.c -lpthread
 
+// A linked list node for process queue
+struct Node {
+    pid_t threadID;
+    int jobTimeRemaining;
+    int roundNumber;
+    sem_t sema; 
+    struct Node* next;
+};
+struct Node* head = NULL;
+head = (struct Node*)malloc(sizeof(struct Node));
+
+
+sem_t *semaphore;
+semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
+
 typedef struct pthread_arg_t {
     int new_socket_fd;
     struct sockaddr_in client_address;
@@ -19,6 +34,7 @@ typedef struct pthread_arg_t {
 
 #define NUM_CLIENTS 10
 #define PORT 5000
+
 
 // function routine of Signal Handler for SIGINT, to terminate all the threads which will all be terminated as we are calling exit of a process instead of pthread_exit
 void serverExitHandler(int sig_num)
@@ -398,6 +414,7 @@ void* HandleClient(void* arg)
   "pwd\n"
   "echo hello\n"
   "ps\n"
+  "/Test.o\n"
   "whoami\n\n"
   "type \"exit\" to quit the program\n";
   send(socket, welcomeMessage, strlen(welcomeMessage), 0);
@@ -450,6 +467,23 @@ void* HandleClient(void* arg)
         close(socket);  
 
         exit(EXIT_SUCCESS);
+      }
+
+
+      //handle dummy program with process queue
+      if (strcmp(message, "./dummyProgram") == 0){ 
+        printf("Simulating running dummyProgram \n");
+        struct Node* process = NULL;
+        process = (struct Node*)malloc(sizeof(struct Node));
+
+        process->thread_id = getid();
+
+        process->jobTimeRemaining = execvp(message);
+        process->roundNumber = 0;
+        process->sema = semaphore;
+
+        //write(fd[1], message, 1024);
+        //exit(EXIT_SUCCESS);
       }
 
       // update if-else conditions and sent -> write
@@ -515,6 +549,7 @@ int main()
 { 
     int socket_fd, new_socket_fd;
     struct sockaddr_in address;
+
     pthread_attr_t pthread_attr;
     pthread_t pthread;
     socklen_t client_address_len;
@@ -582,9 +617,6 @@ int main()
 
       /* Initialise pthread argument. */
       pthread_arg->new_socket_fd = new_socket_fd;
-      /* TODO: Initialise arguments passed to threads here. See lines 22 and
-        * 139.
-        */
 
       /* Create thread to serve connection to client. */
       if (pthread_create(&pthread, &pthread_attr, HandleClient, (void *)pthread_arg) != 0) {
@@ -592,6 +624,7 @@ int main()
           free(pthread_arg);
           continue;
       }
+
     }
     
     return 0;
