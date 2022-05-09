@@ -12,14 +12,18 @@
 
 // A linked list node for process queue
 struct Node {
-    pid_t thread_id;
-    int job_remain;
-    int round_nb;
-    //semaphore
-
+    pid_t threadID;
+    int jobTimeRemaining;
+    int roundNumber;
+    sem_t sema; 
     struct Node* next;
 };
+struct Node* head = NULL;
+head = (struct Node*)malloc(sizeof(struct Node));
 
+
+sem_t *semaphore;
+semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
 
 typedef struct pthread_arg_t {
     int new_socket_fd;
@@ -365,7 +369,7 @@ void* HandleClient(void* arg)
   "pwd\n"
   "echo hello\n"
   "ps\n"
-  "gcc -o test test.c && ./test\n"
+  "/Test.o\n"
   "whoami\n\n"
   "type \"exit\" to quit the program\n";
   send(socket, welcomeMessage, strlen(welcomeMessage), 0);
@@ -418,6 +422,23 @@ void* HandleClient(void* arg)
         close(socket);  
 
         exit(EXIT_SUCCESS);
+      }
+
+
+      //handle dummy program with process queue
+      if (strcmp(message, "./dummyProgram") == 0){ 
+        printf("Simulating running dummyProgram \n");
+        struct Node* process = NULL;
+        process = (struct Node*)malloc(sizeof(struct Node));
+
+        process->thread_id = getid();
+
+        process->jobTimeRemaining = execvp(message);
+        process->roundNumber = 0;
+        process->sema = semaphore;
+
+        //write(fd[1], message, 1024);
+        //exit(EXIT_SUCCESS);
       }
 
       // update if-else conditions and sent -> write
@@ -483,6 +504,7 @@ int main()
 { 
     int socket_fd, new_socket_fd;
     struct sockaddr_in address;
+
     pthread_attr_t pthread_attr;
     pthread_t pthread;
     socklen_t client_address_len;
