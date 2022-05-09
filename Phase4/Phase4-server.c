@@ -392,9 +392,9 @@ struct Node* getSmallestJob(struct Node* n){
   int min = INT_MAX;
   pid_t minID;
   while (n != NULL) {
-    if(n->jobTimeRemaining < min){
+    if(n->jobTimeRemaining < min){  
       min = n->jobTimeRemaining;
-      minID = getid();
+      minID = getpid();
     }
     n = n->next;
   }
@@ -505,7 +505,7 @@ void* HandleClient(void* arg)
         process = (struct Node*)malloc(sizeof(struct Node));
         head->next = process;
 
-        process->threadID = getid();
+        process->threadID = getpid();
         process->jobTimeRemaining = execvp(message);
         process->roundNumber = 0;
         process->sema = clientSemaphore;
