@@ -503,17 +503,14 @@ void* HandleClient(void* arg)
         printf("Simulating running dummyProgram \n");
         struct Node* process = NULL;
         process = (struct Node*)malloc(sizeof(struct Node));
-        head -> next = process;
+        head->next = process;
 
         process->threadID = getid();
         process->jobTimeRemaining = execvp(message);
         process->roundNumber = 0;
-        process->sema = semaphore;
+        process->sema = clientSemaphore;
 
-        head = process;
-
-        //write(fd[1], message, 1024);
-        //exit(EXIT_SUCCESS);
+        head = process; // push the process to the queue
       }
 
       // update if-else conditions and sent -> write
