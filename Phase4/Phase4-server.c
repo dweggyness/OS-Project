@@ -12,6 +12,8 @@
 #include <signal.h> // header for signal related functions and macros declarations
 // compile your code with: gcc -o output code.c -lpthread
 
+#define SHARED 1
+
 // A linked list node for process queue
 struct Node {
     pid_t threadID;
@@ -20,12 +22,13 @@ struct Node {
     sem_t sema; 
     struct Node* next;
 };
+
 struct Node* head = NULL;
 head = (struct Node*)malloc(sizeof(struct Node));
 
 
-sem_t *semaphore;
-semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
+// sem_t *semaphore;
+// semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
 
 typedef struct pthread_arg_t {
     int new_socket_fd;
@@ -226,14 +229,12 @@ void processpipeline4CMD(char *firstcommand[], char *secondcommand[] , char *thi
   exit(EXIT_FAILURE);
 }
 
-
-
 void SchedulerFunction() {
   sem_t *programSemaphore;
   programSemaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
 
   int quantum = 0;
-  int currentRunningThread = 5; // current node/thread
+  struct Node currentRunningThread; // current node/thread
   while(1) {
     sleep(1);
     if (1) continue; // processQueue.empty())
@@ -245,11 +246,14 @@ void SchedulerFunction() {
       sem_wait(programSemaphore); // stop currently running dummy program
 
       // select the next node to run
-      int node = 5; // node = processQueue.getNodeWithSRT();
-      sem_t *threadSemaphore = 1; // node.semaphore;
+      struct Node nextThread; // node = processQueue.getNodeWithSRT();
+      sem_t *threadSemaphore = &nextThread.sema; // node.semaphore;
       sem_post(threadSemaphore); // release the semaphore for the thread, it is now running
       sem_post(programSemaphore); // allow dummyprogram to run
-      int threadRoundNum = 2; // depending on round number, different quantum
+
+      currentRunningThread = nextThread;
+
+      int threadRoundNum = nextThread.roundNumber; // depending on round number, different quantum
       switch(threadRoundNum) {
         case 1: 
           quantum = 3;
@@ -390,6 +394,9 @@ void* HandleClient(void* arg)
   int socket = pthread_arg->new_socket_fd;
   free(arg);
   printf("handling new client in a thread using socket: %d\n", socket);
+
+  sem_t *clientSemaphore;
+  sem_init(clientSemaphore, SHARED, 0); // initialize a locked semaphore
   
   // initial message sent to client after successful socket connection
   char* welcomeMessage = "@@@ Welcome to JS (Jun Sonya) Shell @@@\n"
@@ -468,24 +475,6 @@ void* HandleClient(void* arg)
 
         exit(EXIT_SUCCESS);
       }
-
-
-      //handle dummy program with process queue
-      if (strcmp(message, "./dummyProgram") == 0){ 
-        printf("Simulating running dummyProgram \n");
-        struct Node* process = NULL;
-        process = (struct Node*)malloc(sizeof(struct Node));
-
-        process->thread_id = getid();
-
-        process->jobTimeRemaining = execvp(message);
-        process->roundNumber = 0;
-        process->sema = semaphore;
-
-        //write(fd[1], message, 1024);
-        //exit(EXIT_SUCCESS);
-      }
-
       // update if-else conditions and sent -> write
       if ((strcmp(message_split, "cat") != 0) && (strcmp(message_split, "sort") != 0)
         && (strcmp(message_split, "sample") != 0) && (strcmp(message_split, "df") != 0) && 
@@ -506,6 +495,20 @@ void* HandleClient(void* arg)
         exit(EXIT_SUCCESS);
       }  
 
+      //handle dummy program with process queue
+      if (strcmp(message, "./dummyProgram") == 0){ 
+        printf("Simulating running dummyProgram \n");
+        struct Node* process = NULL;
+        process = (struct Node*)malloc(sizeof(struct Node));
+
+        process->threadID = getid();
+        process->jobTimeRemaining = ;
+        process->roundNumber = 1;
+        process->sema = clientSemaphore;
+
+        //write(fd[1], message, 1024);
+        //exit(EXIT_SUCCESS);
+      }
       // redirect STDOUT to sock2 , before calling the execvp for valid commands
 
       dup2(fd[1], STDOUT_FILENO);  /* duplicate socket on stdout */
