@@ -538,7 +538,7 @@ void* HandleClient(void* arg)
         process->semaphore = clientSemaphore;
 
 
-        char* message = "dummyProgram";
+        char* message = "./dummyProgram.o";
         write(fd[1], message, 1024);
         close(fd[1]);  
         close(fd[0]);  
@@ -598,7 +598,7 @@ void* HandleClient(void* arg)
       }
 
       // if command is dummyProgram, we need to handle return value
-      if (strcmp(buf, "dummyProgram") == 0) {
+      if (strcmp(buf, "./dummyProgram.o") == 0) {
 
         printf("RETURN VALUE FROM DUMMY: %d \n", waitStatus);
         send(socket, &buf, sizeof(buf), 0);
