@@ -512,11 +512,11 @@ void* HandleClient(void* arg)
       }
 
       //handle dummy program with process queue
-      if (strcmp(message_split, "./dummyProgram") == 0){ 
+      if (strcmp(message_split, "./dummyProgram.o") == 0){ 
         char *jobRemainingStr = strtok(NULL, " "); 
         
         if (jobRemainingStr == NULL) {
-          char* errMessage = "./dummyProgram has to be called with a job time parameter. \n";
+          char* errMessage = "./dummyProgram.o has to be called with a job time parameter. \n";
           
           write(fd[1], errMessage, 1024);
           close(fd[1]);  
@@ -546,8 +546,6 @@ void* HandleClient(void* arg)
 
         char threadID[10];
         sprintf(threadID, "%ld", process->threadID); 
-
-        printf("pthread_self: %ld --- %s \n", pthread_self(), &threadID);
 \
         execlp("./dummyProgram.o", "./dummyProgram.o", jobRemainingStr, &threadID, NULL);
 

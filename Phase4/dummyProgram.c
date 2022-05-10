@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
   }
 
   int jobTimeRemaining = atoi(argv[1]);
-  int threadID = atoi(argv[2]);
+  long threadID = atoi(argv[2]);
 
   sem_t *semaphore;
   semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     // returnValue should be 0 if the getvalue call was successful
     if (semaphore_val == 1) {
       jobTimeRemaining--;
-      printf("Thread ID: %d, running for an iteration. Remaining time: %d \n", threadID, jobTimeRemaining);
+      printf("Thread ID: %ld, running for an iteration. Remaining time: %d \n", threadID, jobTimeRemaining);
       if (jobTimeRemaining <= 0) { // job complete
         return 0;
       }
