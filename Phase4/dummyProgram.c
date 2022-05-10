@@ -7,12 +7,13 @@
 int main(int argc, char *argv[])
 {
   if (argc != 3) {
-    printf("Please enter 2 parameters (threadID jobTime) \n");
+    printf("%s \n", argv[1]);
+    printf("argc: %d, Please enter 2 parameters (jobTime threadID) \n", argc);
     return -1;
   }
 
-  int threadID = atoi(argv[1]);
-  int jobTimeRemaining = atoi(argv[2]);
+  int jobTimeRemaining = atoi(argv[1]);
+  int threadID = atoi(argv[2]);
 
   sem_t *semaphore;
   semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
