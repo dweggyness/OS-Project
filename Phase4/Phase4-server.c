@@ -34,14 +34,24 @@ struct Node {
 // CTRL+F "@@HELLOSONYA@@" to find the code
 struct Node* head = NULL;
 
-// function to get job with smallest time remaining 
-struct Node* getSmallestJob(struct Node* n){
+void insertIntoList(struct Node* node) {
+  printf("Attempting insert \n");
+  printf("Inserting node with threadID %ld \n", node->threadID);
+  node->next = head;
+  head = node;
 
-  struct Node* tempHead = n;
-  struct Node* temp = n;
+  printf("getting head: %ld \n", head->threadID);
+}
+
+// function to get job with smallest time remaining 
+struct Node* getSmallestJob(){
+
+  struct Node* tempHead = head;
+  struct Node* temp = head;
 
   int min = INT_MAX;
   long minID;
+  printf("HERE1 \n");
   while (temp != NULL) {
     if(temp->jobTimeRemaining < min){  
       min = temp->jobTimeRemaining;
@@ -49,18 +59,23 @@ struct Node* getSmallestJob(struct Node* n){
     }
     temp = temp->next;
   }
+
   temp = tempHead;
+  printf("HERE2 \n");
+  // minID = threadID with the lowest jobTimeRemaining
   while(temp != NULL){
-    if(temp ->threadID == minID){
+    printf("Checking thread id: %ld -- minID: %ld\n", temp->threadID, minID);
+    if(temp->threadID == minID){
       free(tempHead);
       return temp;
     }
     temp = temp->next;
   }
 
+  printf("HERE3 \n");
   free(tempHead);
   free(temp);
-  return n;
+  return head;
 }
 
 // function to delete - given a threadID, delete that node from the linked list
@@ -105,11 +120,78 @@ struct Node* getNode(struct Node* n, long id){
   return n;
 }
 
-
 // function that returns true if the linked list is empty
-bool isEmpty(struct Node* n){
-  return (n->next == NULL); //head itself is dummy node
+bool isEmpty(){
+  return (head->next == NULL); //head itself is dummy node
 }
+
+
+void *SchedulerFunction() {
+  sem_t *programSemaphore;
+  programSemaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
+
+  int quantum = 0;
+  struct Node* currentlyRunningThread; // current node/thread
+  while(1) {
+    printf("Scheduler function tick \n");
+    sleep(1);
+    // printf("getting head in scheduler: %ld \n", head->threadID);
+    // if process queue is empty, then early return
+    if (isEmpty()) continue; 
+
+    printf("Not Empty \n");
+  
+    if (quantum <= 0) { // quantum has ended, stop the current thread and select next process
+
+      printf("Trying to schedule new task \n");
+      // stop currently running node, if it exists
+      if (currentlyRunningThread != NULL) {
+        sem_t *currentSemaphore = currentlyRunningThread->semaphore; // currentRunningThread.semaphore);
+        sem_wait(currentSemaphore); // stop currently running semaphore
+        sem_wait(programSemaphore); // stop currently running dummy program
+      }
+
+      printf("Trying to get next node to run \n");
+      // select the next node to run
+      struct Node* nextThread; 
+      nextThread = getSmallestJob(); // get job with smallest remaining time
+
+      printf("NextThreadID: %ld \n", nextThread->threadID);
+      sem_t *threadSemaphore = nextThread->semaphore; 
+      sem_post(threadSemaphore); // release the semaphore for the thread, it is now running
+      sem_post(programSemaphore); // allow dummyprogram to run
+
+      currentlyRunningThread = nextThread;
+
+      
+      printf("Trying to schedule new task \n");
+
+      int threadRoundNum = nextThread->roundNumber; // depending on round number, different quantum
+      switch(threadRoundNum) {
+        case 1: 
+          quantum = 3;
+          break;
+        case 2:
+          quantum = 7;
+          break;
+        default:
+          quantum = 3;
+          if(threadRoundNum > 2) {
+            quantum = 10;
+          }
+          break;
+      }
+    } else { // quantum > 0, keep running
+      quantum--;
+    }
+  }
+}
+
+
+
+
+
+
 
 // sem_t *semaphore;
 // semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
@@ -313,53 +395,6 @@ void processpipeline4CMD(char *firstcommand[], char *secondcommand[] , char *thi
   exit(EXIT_FAILURE);
 }
 
-void SchedulerFunction() {
-  sem_t *programSemaphore;
-  programSemaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
-
-  int quantum = 0;
-  struct Node currentlyRunningThread; // current node/thread
-  while(1) {
-    sleep(1);
-    if (1) continue; // processQueue.isEmpty())
-  
-    if (quantum <= 0) { // quantum has ended, stop the current thread and select next process
-      // stop currently running node
-      sem_t *currentSemaphore = currentlyRunningThread.semaphore; // currentRunningThread.semaphore);
-      sem_wait(currentSemaphore); // stop currently running semaphore
-      sem_wait(programSemaphore); // stop currently running dummy program
-
-      // select the next node to run
-      struct Node nextThread; // node = processQueue.getNodeWithSRT();
-      sem_t *threadSemaphore = nextThread.semaphore; // node.semaphore;
-      sem_post(threadSemaphore); // release the semaphore for the thread, it is now running
-      sem_post(programSemaphore); // allow dummyprogram to run
-
-      currentlyRunningThread = nextThread;
-
-      int threadRoundNum = nextThread.roundNumber; // depending on round number, different quantum
-      switch(threadRoundNum) {
-        case 1: 
-          quantum = 3;
-          break;
-        case 2:
-          quantum = 7;
-          break;
-        default:
-          quantum = 3;
-          if(threadRoundNum > 2) {
-            quantum = 10;
-          }
-          break;
-      }
-    } else { // quantum > 0, keep running
-      quantum--;
-    }
-  }
-
-  return;
-}
-
 // parser for input, supports up to 3 pipes ( 4 commands )
 
 void readParseInput(char* inputStr) {
@@ -516,6 +551,78 @@ void* HandleClient(void* arg)
   int isRunningDummyProgram = 0;
   
   while (1) {
+
+    if (!isRunningDummyProgram) {
+// read input from user
+    char message[1024] = {0};
+    recv(socket, message, sizeof(message),0); 
+
+    printf("Received command: %s \n", message);  
+    message[strcspn(message, "\n")] = 0;
+    
+    //handle exit command
+    if (strcmp(message, "exit") == 0){ 
+      printf("Client exited. Terminating session... \n");
+      close(socket);
+
+      char* message = "exit";
+      pthread_exit(NULL);
+    }
+
+    char message_copy[1024];
+    strcpy(message_copy, message);
+    char* message_split = strtok(message_copy, " "); //return a pointer
+
+    //handle commands with only blanks
+    if (message_split == NULL) { 
+      printf("empty cmd \n");
+      char* errMessage = "No command entered. Continue... \n";
+      
+      send(socket, &errMessage, sizeof(errMessage), 0);
+      continue;
+    }
+
+    //handle dummy program with process queue
+    if (strcmp(message_split, "./dummyProgram.o") == 0){ 
+      char *jobRemainingStr = strtok(NULL, " "); 
+      
+      if (jobRemainingStr == NULL) {
+        char* errMessage = "./dummyProgram.o has to be called with a job time parameter. \n";
+         
+        send(socket, &errMessage, sizeof(errMessage), 0);
+        continue;
+      }
+
+      int jobTime = atoi(jobRemainingStr);
+
+      printf("INITIAL RUN: Simulating running dummyProgram \n");
+      struct Node* process = NULL;
+      process = (struct Node*)malloc(sizeof(struct Node));
+
+      process->threadID = pthread_self();
+      process->jobTimeRemaining = jobTime;
+      process->roundNumber = 1;
+      process->semaphore = clientSemaphore;
+
+      char threadID[10];
+      sprintf(threadID, "%ld", process->threadID); 
+      
+      // add to scheduler
+
+      // insert the node into the process queue
+      insertIntoList(process);
+
+      isRunningDummyProgram = 1;
+      // replace the "message" or command that will be executed in the child process
+      sprintf(message, "./dummyProgram.o %s %s", jobRemainingStr, threadID);
+
+      sem_wait(clientSemaphore);
+    } else if (isRunningDummyProgram) {
+      // still running the dummy program, wait for semaphore 
+      // scheduler will unlock the semaphore when main thread is free
+      sem_wait(clientSemaphore);
+    }
+
     int fd[2]; // pipe 1 for getting output from child 1 and giving it to child 2
     
     if (pipe(fd) < 0) {
@@ -529,108 +636,6 @@ void* HandleClient(void* arg)
       exit(EXIT_FAILURE);
     }
     else if(pid == 0) {
-      if (isRunningDummyProgram) {
-
-      }
-
-      char message[1024] = {0};
-      recv(socket, message, sizeof(message),0); 
-
-      printf("Received command: %s \n", message);  
-      message[strcspn(message, "\n")] = 0;
-      
-      //handle exit command
-      if (strcmp(message, "exit") == 0){ 
-        printf("Client exited. Terminating session... \n");
-        close(socket);
-
-        char* message = "exit";
-        
-        write(fd[1], message, 1024);
-        exit(EXIT_SUCCESS);
-      }
-
-      char message_copy[1024];
-      strcpy(message_copy, message);
-      char* message_split = strtok(message_copy, " "); //return a pointer
-
-      //handle commands with only blanks
-      if (message_split == NULL) { 
-        printf("empty cmd \n");
-        char* errMessage = "No command entered. Continue... \n";
-        
-        write(fd[1], errMessage, 1024);
-        close(fd[1]);  
-        close(fd[0]);  
-        close(socket);  
-
-        exit(EXIT_SUCCESS);
-      }
-
-      //handle dummy program with process queue
-      if (strcmp(message_split, "./dummyProgram.o") == 0){ 
-        char *jobRemainingStr = strtok(NULL, " "); 
-        
-        if (jobRemainingStr == NULL) {
-          char* errMessage = "./dummyProgram.o has to be called with a job time parameter. \n";
-          
-          write(fd[1], errMessage, 1024);
-          close(fd[1]);  
-          close(fd[0]);  
-          close(socket);  
-
-          exit(EXIT_SUCCESS);
-        }
-
-        int jobTime = atoi(jobRemainingStr);
-
-        printf("INITIAL RUN: Simulating running dummyProgram \n");
-        struct Node* process = NULL;
-        process = (struct Node*)malloc(sizeof(struct Node));
-
-        process->threadID = pthread_self();
-        process->jobTimeRemaining = jobTime;
-        process->roundNumber = 1;
-        process->semaphore = clientSemaphore;
-
-
-        char* message = "./dummyProgram.o";
-        write(fd[1], message, 1024);
-        close(fd[1]);  
-        close(fd[0]);  
-        close(socket);  
-
-        char threadID[10];
-        sprintf(threadID, "%ld", process->threadID); 
-
-        execlp("./dummyProgram.o", "./dummyProgram.o", jobRemainingStr, &threadID, NULL);
-
-        //write(fd[1], message, 1024);
-        //exit(EXIT_SUCCESS);
-      }
-
-      // update if-else conditions and sent -> write
-      if ((strcmp(message_split, "cat") != 0) && (strcmp(message_split, "sort") != 0)
-        && (strcmp(message_split, "sample") != 0) && (strcmp(message_split, "df") != 0) && 
-        (strcmp(message_split, "ls") != 0) && (strcmp(message_split, "man") != 0) &&
-        (strcmp(message_split, "pwd") != 0) && (strcmp(message_split, "echo") != 0) &&
-        (strcmp(message_split, "ps") != 0) && (strcmp(message_split, "whoami") != 0) &&
-        (strcmp(message_split, "./Test.o") != 0)) { 
-        
-        printf("invalid commands \n");
-
-        // write invalid message to the pipe
-        char* errMessage = "Command is currently unavailable, change one... \n";
-        write(fd[1], errMessage, 1024);
-
-        close(fd[1]);  
-        close(fd[0]);  
-        close(socket);  
-        exit(EXIT_SUCCESS);
-      }  
-
-      // redirect STDOUT to sock2 , before calling the execvp for valid commands
-
       dup2(fd[1], STDOUT_FILENO);  /* duplicate socket on stdout */
       dup2(fd[1], STDERR_FILENO);  /* duplicate socket on stderr too */
       close(fd[1]);  
@@ -639,32 +644,30 @@ void* HandleClient(void* arg)
 
       readParseInput(message);
       exit(EXIT_SUCCESS);
-
     } else { //parent process under a thread, run only when input is "exit"
-        int waitStatus;
+      int waitStatus;
       waitpid(pid, &waitStatus, 0);
       close(fd[1]);  
 
       char buf[1024] = {0};
       int nread = read(fd[0], buf, 1024);
 
-      // if command is to exit, we exit
-      if (strcmp(buf, "exit") == 0) {
-        pthread_exit(NULL);
-      }
-
       // if command is dummyProgram, we need to handle return value
-      if (strcmp(buf, "./dummyProgram.o") == 0) {
-
+      if (isRunningDummyProgram) {
+        int dummyRemainingTime = waitStatus;
         printf("RETURN VALUE FROM DUMMY: %d \n", waitStatus);
         send(socket, &buf, sizeof(buf), 0);
         close(fd[0]);
         // here, get the node and update the remaining time/ round robin
         // processQueue.getNode(pthread_self())
 
+        if (dummyRemainingTime == 0) {
+          char* completeMessage = "./dummyProgram finished execution. \n";
+          send(socket, &buf, sizeof(buf), 0);
+          isRunningDummyProgram = 0;
+        }
         // if remaining time 0 (finished), delete the node
         // processQueue.deleteNode(&head, pthread_self())
-
       } else {
         if (nread > 0) {
           printf("Sending Valid Buffer \n\n");
@@ -675,6 +678,7 @@ void* HandleClient(void* arg)
         }
       }
       close(fd[0]);
+      }
     }
   }
   
@@ -690,6 +694,7 @@ int main()
 
     pthread_attr_t pthread_attr;
     pthread_t pthread;
+    pthread_t mainThread;
     socklen_t client_address_len;
 
     /* Initialise IPv4 address. */
@@ -739,6 +744,13 @@ int main()
     // initialize process queue
     // @@HELLOSONYA@@
     head = (struct Node*)malloc(sizeof(struct Node));
+
+    // create a main thread for scheduling 
+    /* Create thread to serve connection to client. */
+    if (pthread_create(&mainThread, &pthread_attr, SchedulerFunction, NULL) != 0) {
+        perror("pthread_create for main thread");
+        free(pthread_arg);
+    }
 
     while(1) {
       printf("New client! \n");
