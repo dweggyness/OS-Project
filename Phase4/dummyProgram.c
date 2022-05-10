@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
   }
 
   int jobTimeRemaining = atoi(argv[1]);
-  long threadID = atoi(argv[2]);
+  long threadID = atol(argv[2]);;
 
   sem_t *semaphore;
   semaphore = sem_open("/dummyProgramSemaphore", O_CREAT, 0644, 1);
