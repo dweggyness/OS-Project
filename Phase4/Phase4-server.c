@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <stdbool.h>
 #include <fcntl.h> 
 #include <semaphore.h>
 #include <limits.h> // INT_MAX
@@ -32,27 +33,76 @@ struct Node {
 // i move the code to main() because you can't malloc global variable
 // CTRL+F "@@HELLOSONYA@@" to find the code
 struct Node* head = NULL;
-struct Node* permanentHead;
 
+// function to get job with smallest time remaining 
 struct Node* getSmallestJob(struct Node* n){
-  // allocate a new node in a heap using `malloc()` and set its data
+
+  struct Node* tempHead = n;
   int min = INT_MAX;
-  pid_t minID;
+  long minID;
   while (n != NULL) {
     if(n->jobTimeRemaining < min){  
       min = n->jobTimeRemaining;
-      minID = getpid();
+      minID = n->threadID;
     }
     n = n->next;
   }
-  n = permanentHead;
+  n = tempHead;
   while(n != NULL){
     if(n->threadID == minID){
+      free(tempHead);
       return n;
     }
   }
 
+  free(tempHead);
   return n;
+}
+
+// function to delete - given a threadID, delete that node from the linked list
+// use pointer to pointer (reference)
+void deleteNode(struct Node** head_ref, long id){
+
+  struct Node *temp = *head_ref, *prev;
+
+  if (temp != NULL && temp->threadID == id) {
+      *head_ref = temp->next; // Changed head
+      free(temp); // free old head
+      return;
+  }
+
+  // Search for the threadID to be deleted, keep track of the previous node 
+  while (temp != NULL && temp->threadID != id) {
+      prev = temp;
+      temp = temp->next;
+  }
+
+  // If threadID was not present in linked list
+  if (temp == NULL)
+      return;
+
+  // Unlink the node from linked list
+  prev->next = temp->next;
+
+  // free memory
+  free(temp);
+}
+
+// function to get - given a threadID, return the node object
+struct Node* getNode(struct Node* n, long id){
+  
+  while(n != NULL){
+    if(n->threadID == id){
+      return n;
+    }
+  }
+  return n;
+}
+
+
+// function that returns true if the linked list is empty
+bool isEmpty(struct Node* n){
+  return (n->next == NULL); //head itself is dummy node
 }
 
 // sem_t *semaphore;
@@ -265,7 +315,7 @@ void SchedulerFunction() {
   struct Node currentlyRunningThread; // current node/thread
   while(1) {
     sleep(1);
-    if (1) continue; // processQueue.empty())
+    if (1) continue; // processQueue.isEmpty())
   
     if (quantum <= 0) { // quantum has ended, stop the current thread and select next process
       // stop currently running node
@@ -607,7 +657,7 @@ void* HandleClient(void* arg)
         // processQueue.getNode(pthread_self())
 
         // if remaining time 0 (finished), delete the node
-        // processQueue.deleteNode(pthread_self())
+        // processQueue.deleteNode(&head, pthread_self())
 
       } else {
         if (nread > 0) {
@@ -683,7 +733,6 @@ int main()
     // initialize process queue
     // @@HELLOSONYA@@
     head = (struct Node*)malloc(sizeof(struct Node));
-    struct Node* permanentHead = head;
 
     while(1) {
       printf("New client! \n");
