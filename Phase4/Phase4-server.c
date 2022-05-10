@@ -38,24 +38,28 @@ struct Node* head = NULL;
 struct Node* getSmallestJob(struct Node* n){
 
   struct Node* tempHead = n;
+  struct Node* temp = n;
+
   int min = INT_MAX;
   long minID;
-  while (n != NULL) {
-    if(n->jobTimeRemaining < min){  
-      min = n->jobTimeRemaining;
-      minID = n->threadID;
+  while (temp != NULL) {
+    if(temp->jobTimeRemaining < min){  
+      min = temp->jobTimeRemaining;
+      minID = temp->threadID;
     }
-    n = n->next;
+    temp = temp->next;
   }
-  n = tempHead;
-  while(n != NULL){
-    if(n->threadID == minID){
+  temp = tempHead;
+  while(temp != NULL){
+    if(temp ->threadID == minID){
       free(tempHead);
-      return n;
+      return temp;
     }
+    temp = temp->next;
   }
 
   free(tempHead);
+  free(temp);
   return n;
 }
 
@@ -90,11 +94,13 @@ void deleteNode(struct Node** head_ref, long id){
 
 // function to get - given a threadID, return the node object
 struct Node* getNode(struct Node* n, long id){
-  
-  while(n != NULL){
-    if(n->threadID == id){
-      return n;
+  struct Node *temp = n;
+
+  while(temp != NULL){
+    if(temp->threadID == id){
+      return temp;
     }
+    temp = temp->next;
   }
   return n;
 }
