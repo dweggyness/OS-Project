@@ -603,6 +603,12 @@ void* HandleClient(void* arg)
         printf("RETURN VALUE FROM DUMMY: %d \n", waitStatus);
         send(socket, &buf, sizeof(buf), 0);
         close(fd[0]);
+        // here, get the node and update the remaining time/ round robin
+        // processQueue.getNode(pthread_self())
+
+        // if remaining time 0 (finished), delete the node
+        // processQueue.deleteNode(pthread_self())
+
       } else {
         if (nread > 0) {
           printf("Sending Valid Buffer \n\n");
