@@ -546,7 +546,7 @@ void* HandleClient(void* arg)
 
         char threadID[10];
         sprintf(threadID, "%ld", process->threadID); 
-\
+
         execlp("./dummyProgram.o", "./dummyProgram.o", jobRemainingStr, &threadID, NULL);
 
         //write(fd[1], message, 1024);
@@ -585,8 +585,9 @@ void* HandleClient(void* arg)
       exit(EXIT_SUCCESS);
 
     } else { //parent process under a thread, run only when input is "exit"
+        int waitStatus;
+      waitpid(pid, &waitStatus, 0);
       close(fd[1]);  
-      //wait(NULL);
 
       char buf[1024] = {0};
       int nread = read(fd[0], buf, 1024);
@@ -598,16 +599,18 @@ void* HandleClient(void* arg)
 
       // if command is dummyProgram, we need to handle return value
       if (strcmp(buf, "dummyProgram") == 0) {
-        close(fd[0]);
-        pthread_exit(NULL);
-      }
 
-      if (nread > 0) {
-        printf("Sending Valid Buffer \n\n");
+        printf("RETURN VALUE FROM DUMMY: %d \n", waitStatus);
         send(socket, &buf, sizeof(buf), 0);
-      } else if (nread == 0) { // read from pipe, but its empty. pipe returned no output
-        printf("Sending Empty Buffer \n\n");
-        send(socket, "", sizeof(""), 0); // send an empty string
+        close(fd[0]);
+      } else {
+        if (nread > 0) {
+          printf("Sending Valid Buffer \n\n");
+          send(socket, &buf, sizeof(buf), 0);
+        } else if (nread == 0) { // read from pipe, but its empty. pipe returned no output
+          printf("Sending Empty Buffer \n\n");
+          send(socket, "", sizeof(""), 0); // send an empty string
+        }
       }
       close(fd[0]);
     }
