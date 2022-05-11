@@ -570,7 +570,7 @@ void* HandleClient(void* arg)
   int isRunningDummyProgram = 0;
   
   while (1) {
-    char message[1024] = {0};
+    char message[4096] = {0};
     if (isRunningDummyProgram == 0) {
       // read input from user
       recv(socket, message, sizeof(message),0); 
@@ -588,14 +588,14 @@ void* HandleClient(void* arg)
         pthread_exit(NULL);
       }
 
-      char message_copy[1024];
+      char message_copy[4096];
       strcpy(message_copy, message);
       char* message_split = strtok(message_copy, " "); //return a pointer
 
       //handle commands with only blanks
       if (message_split == NULL) { 
         printf("empty cmd \n");
-        char errMessage[1024] = "No command entered. Continue... \n";
+        char errMessage[4096] = "No command entered. Continue... \n";
         send(socket, errMessage, strlen(errMessage), 0);
         continue;
       }
@@ -610,7 +610,7 @@ void* HandleClient(void* arg)
         printf("invalid commands \n");
 
         // write invalid message to the pipe
-        char errMessage[1024] = "Command is currently unavailable, change one... \n";
+        char errMessage[4096] = "Command is currently unavailable, change one... \n";
         send(socket, errMessage, strlen(errMessage), 0);
         continue;
       }  
@@ -620,7 +620,7 @@ void* HandleClient(void* arg)
         char *jobRemainingStr = strtok(NULL, " "); 
         
         if (jobRemainingStr == NULL) {
-          char errMessage[1024] = "./dummyProgram.o has to be called with a job time parameter. \n";
+          char errMessage[4096] = "./dummyProgram.o has to be called with a job time parameter. \n";
           send(socket, errMessage, strlen(errMessage), 0);
           continue;
         }
@@ -643,7 +643,7 @@ void* HandleClient(void* arg)
 
         isRunningDummyProgram = 1;
         // replace the "message" or command that will be executed in the child process
-        memset(message, 0, 1024);
+        memset(message, 0, 4096);
         sprintf(message, "./dummyProgram.o %d %ld", jobTime, process->threadID);
 
         // wait for scheduler to give the Go-Ahead to run the program.
@@ -654,7 +654,7 @@ void* HandleClient(void* arg)
       long threadID = pthread_self();
       struct Node* jobStatus = getNode(threadID);
       int jobTimeRemaining = jobStatus->jobTimeRemaining;
-      memset(message, 0, 1024);
+      memset(message, 0, 4096);
       sprintf(message, "./dummyProgram.o %d %ld", jobTimeRemaining, threadID);
 
       sleep(1);
@@ -691,8 +691,8 @@ void* HandleClient(void* arg)
       wait(&waitStatus);
       close(fd[1]);  
 
-      char buf[1024] = {0};
-      int nread = read(fd[0], buf, 1024);
+      char buf[4096] = {0};
+      int nread = read(fd[0], buf, 4096);
 
       // if command is dummyProgram, we need to handle return value
       if (isRunningDummyProgram) {
@@ -706,7 +706,7 @@ void* HandleClient(void* arg)
         job->roundNumber = job->roundNumber + 1;
 
         if (dummyRemainingTime == 0) { // program done executing!
-          char completeMessage[1024] = "./dummyProgram.o has successfully executed! \n";
+          char completeMessage[4096] = "./dummyProgram.o has successfully executed! \n";
           send(socket, completeMessage, strlen(completeMessage), 0);
           isRunningDummyProgram = 0;
           
