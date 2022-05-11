@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <sys/time.h>
 #include <stdbool.h>
 #include <fcntl.h> 
 #include <semaphore.h>
@@ -15,6 +16,10 @@
 // compile your code with: gcc -o output code.c -lpthread
 
 #define SHARED 1
+
+//Size of each chunk of data received
+#define CHUNK_SIZE 512
+
 
 // A linked list node for process queue
 struct Node {
@@ -42,33 +47,36 @@ void insertIntoList(struct Node* node) {
 }
 
 // function to check the current smallest round number
-int getSmallestRound(){
-  struct Node* temp = head;
-  int minRound = INT_MAX;
-  while (temp != NULL) {
-    if(temp->roundNumber < minRound){  
-      minRound = temp->roundNumber;
-    }
-    temp = temp->next;
-  }
-  return minRound;
-}
+// int getSmallestRound(){
+//   struct Node* temp = head;
+//   int minRound = INT_MAX;
+//   while (temp != NULL) {
+//     if(temp->roundNumber < minRound){  
+//       minRound = temp->roundNumber;
+//     }
+//     temp = temp->next;
+//   }
+//   return minRound;
+// }
 
 // function to get job with smallest time remaining in the current round 
-struct Node* getSmallestJob(){
+struct Node* getSmallestJob(struct Node* currentlyRunningThread){
 
   struct Node* temp = head;
 
   int min = INT_MAX;
   long minID;
 
-  int smallestRound = getSmallestRound();
-  printf("round number for the current running process: %d \n", smallestRound);
+  //int smallestRound = getSmallestRound();
+  //printf("round number for the current running process: %d \n", smallestRound);
 
   while (temp != NULL) {
-    if(temp->roundNumber == smallestRound && temp->jobTimeRemaining < min){  
-      min = temp->jobTimeRemaining;
-      minID = temp->threadID;
+    if(temp->jobTimeRemaining < min){  
+      if(currentlyRunningThread == NULL || currentlyRunningThread->threadID != temp->threadID){
+        min = temp->jobTimeRemaining;
+        minID = temp->threadID;
+      }
+
     }
     temp = temp->next;
   }
@@ -82,7 +90,7 @@ struct Node* getSmallestJob(){
     temp = temp->next;
   }
 
-  return head;
+  return currentlyRunningThread; //when there is no other threads besides current one
 }
 
 // function to delete - given a threadID, delete that node from the linked list
@@ -169,8 +177,8 @@ void *SchedulerFunction() {
         sem_wait(currentSemaphore); // stop currently running semaphore
       }
 
-      // select the next node to run
-      struct Node* nextThread = getSmallestJob(); // get job with smallest remaining time
+      // select the next node to run except the current node
+      struct Node* nextThread = getSmallestJob(currentlyRunningThread); // get job with smallest remaining time
 
       sem_t *threadSemaphore = nextThread->semaphore; 
       sem_post(programSemaphore); // allow dummyprogram to run
@@ -200,9 +208,6 @@ void *SchedulerFunction() {
     }
   }
 }
-
-
-
 
 
 
@@ -521,7 +526,6 @@ void readParseInput(char* inputStr) {
 }
 
 
-
 // Function that handles the client
 void* HandleClient(void* arg)
 {
@@ -728,7 +732,6 @@ void* HandleClient(void* arg)
       }
   }
 }
-
 
 
 int main()
