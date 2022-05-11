@@ -41,23 +41,39 @@ void insertIntoList(struct Node* node) {
   head = node;
 }
 
-// function to get job with smallest time remaining 
+// function to check the current smallest round number
+int getSmallestRound(){
+  struct Node* temp = head;
+  int minRound = INT_MAX;
+  while (temp != NULL) {
+    if(temp->roundNumber < minRound){  
+      minRound = temp->roundNumber;
+    }
+    temp = temp->next;
+  }
+  return minRound;
+}
+
+// function to get job with smallest time remaining in the current round 
 struct Node* getSmallestJob(){
 
-  struct Node* tempHead = head;
   struct Node* temp = head;
 
   int min = INT_MAX;
   long minID;
+
+  int smallestRound = getSmallestRound();
+  printf("round number for the current running process: %d \n", smallestRound);
+
   while (temp != NULL) {
-    if(temp->jobTimeRemaining < min){  
+    if(temp->roundNumber == smallestRound && temp->jobTimeRemaining < min){  
       min = temp->jobTimeRemaining;
       minID = temp->threadID;
     }
     temp = temp->next;
   }
 
-  temp = tempHead;
+  temp = head;
   // minID = threadID with the lowest jobTimeRemaining
   while(temp != NULL){
     if(temp->threadID == minID){
@@ -76,7 +92,7 @@ void deleteNode(long id){
   struct Node *temp = head, *prev;
 
   if (temp != NULL && temp->threadID == id) {
-    printf("Yes its this one \n");
+    //printf("Yes its this one \n");
     head = temp->next; // Changed head
     free(temp); // free old head
     return;
@@ -540,7 +556,7 @@ void* HandleClient(void* arg)
   "pwd\n"
   "echo hello\n"
   "ps\n"
-  "/Test.o\n"
+  "./dummyProgram.o\n"
   "whoami\n\n"
   "type \"exit\" to quit the program\n";
   send(socket, welcomeMessage, strlen(welcomeMessage), 0);
