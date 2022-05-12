@@ -56,7 +56,7 @@ int main()
     printf("\nConnection Failed \n");
     return -1;
   }
-  char inputStr[1000];
+  char inputStr[4096];
 
   printf("Successfully connected to server at port %d! \n", PORT);
   
