@@ -186,7 +186,7 @@ void *SchedulerFunction() {
 
       currentlyRunningThread = nextThread;
 
-      int threadRoundNum = nextThread->roundNumber; // depending on round number, different quantum
+      int threadRoundNum = currentlyRunningThread->roundNumber; // depending on round number, different quantum
       switch(threadRoundNum) {
         case 1: 
           quantum = 3;
