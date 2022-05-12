@@ -560,7 +560,7 @@ void* HandleClient(void* arg)
   "pwd\n"
   "echo hello\n"
   "ps\n"
-  "./dummyProgram.o\n"
+  "./dummyProgram.o X(an integer)\n"
   "whoami\n\n"
   "type \"exit\" to quit the program\n";
   send(socket, welcomeMessage, strlen(welcomeMessage), 0);
