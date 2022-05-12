@@ -61,7 +61,7 @@ int main()
   printf("Successfully connected to server at port %d! \n", PORT);
   
   // receive initial message from server
-  char message[1024] = {0};
+  char message[4096] = {0};
   recv(sock, message, sizeof(message),0); 
   printf("%s", message);
 
@@ -85,7 +85,7 @@ int main()
     send(sock,inputStr,strlen(inputStr),0); // send input message to server
 
     // after user input, wait for server response and print server response
-    char response[1024] = {0};
+    char response[4096] = {0};
     recv(sock, response, sizeof(response),0); // receive input string from server
 
     printf("%s \n", response);
